@@ -78,6 +78,12 @@ function useTicker(active: boolean, ms = 120): number {
   return n;
 }
 
+/** "openrouter" + "openrouter/free" → "openrouter/free" (no doubled prefix). */
+export function fullModel(provider: string, model?: string): string {
+  if (!model) return `${provider}/?`;
+  return model.startsWith(`${provider}/`) ? model : `${provider}/${model}`;
+}
+
 function modelLabel(cfg: AtlasConfig, provider: string, model?: string): string {
   if (provider === "auto") {
     const ready = readyProviders(cfg);
@@ -85,7 +91,7 @@ function modelLabel(cfg: AtlasConfig, provider: string, model?: string): string 
     const chain = (keyed.length ? keyed : ready).map((p) => p.def.id).slice(0, 3);
     return chain.length ? `auto ${I.swap} ${chain.join(` ${I.arrow} `)}` : "auto";
   }
-  return `${provider}/${model ?? cfg.models[provider] ?? getProvider(provider)?.defaultModel ?? "?"}`;
+  return fullModel(provider, model ?? cfg.models[provider] ?? getProvider(provider)?.defaultModel);
 }
 
 const connectedNames = (cfg: AtlasConfig) =>
@@ -173,7 +179,8 @@ export function Chat({
   const [git, setGit] = useState<GitInfo>(() => gitInfo(cwd));
   const [answered, setAnswered] = useState<{ provider: string; model?: string } | null>(null);
   const [cost, setCost] = useState(0);
-  const history = useRef<ChatMessage[]>(initialSession ? [...initialSession.messages] : cfg.system ? [{ role: "system", content: cfg.system }] : []);
+  // The Atlas identity, so models don't introduce themselves as "Gemma"/"LFM"/….
+  const history = useRef<ChatMessage[]>(initialSession ? [...initialSession.messages] : [{ role: "system", content: cfg.system ?? t(initialLang).identity }]);
   const abort = useRef<AbortController | null>(null);
   const sent = useRef<string[]>([]);
   const histPos = useRef(-1);
@@ -394,12 +401,12 @@ export function Chat({
         onResponse: onHeaders,
         onEvent: (e) => {
           if (e.type === "provider") {
-            meta = `${e.provider}/${e.model ?? "?"}`;
+            meta = fullModel(e.provider, e.model);
             used = { provider: e.provider, model: e.model };
             setStatus(meta);
           } else {
             // One busy free model is not the provider's quota — only RouteError marks limits.
-            push(entry("info", `${e.provider}/${e.model ?? "?"} · ${e.limited ? L.switched : L.fallback}`));
+            push(entry("info", `${fullModel(e.provider, e.model)} · ${e.limited ? L.switched : L.fallback}`));
           }
         },
       })) {
@@ -469,7 +476,7 @@ export function Chat({
 
   function finishAgent(task: string, r: AgentResult) {
     setOverlay(null);
-    const where = r.provider ? `${r.provider}/${r.model ?? "?"}` : "";
+    const where = r.provider ? fullModel(r.provider, r.model) : "";
     const meta = [where, `${r.steps} steps`, r.changedFiles.length ? `${r.changedFiles.length} ${L.agentChanged}` : ""].filter(Boolean).join(" · ");
     if (r.text) push(entry("assistant", r.text, meta));
     if (r.changedFiles.length) push(entry("info", `${L.agentChanged}: ${r.changedFiles.join(", ")}`));
@@ -541,7 +548,7 @@ export function Chat({
     costUsd: cost,
     added: git.added,
     removed: git.removed,
-    model: `${shown ? `${shown.provider}/${shown.model ?? "?"}` : modelLabel(cfg, provider)}${lim ? ` ${formatLimit(lim)}` : ""}`,
+    model: `${shown ? fullModel(shown.provider, shown.model) : modelLabel(cfg, provider)}${lim ? ` ${formatLimit(lim)}` : ""}`,
   });
 
   return (

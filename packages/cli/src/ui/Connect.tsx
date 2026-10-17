@@ -2,8 +2,9 @@ import { listModels, PROVIDERS, resolveProvider, saveConfig, type AtlasConfig, t
 import { Box, Text, useInput } from "ink";
 import Spinner from "ink-spinner";
 import TextInput from "ink-text-input";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dict } from "../i18n.js";
+import { loginOpenRouter } from "../oauth.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "../system.js";
 import { Select, type SelectItem } from "./Select.js";
 import { C, I } from "./theme.js";
@@ -11,6 +12,7 @@ import { C, I } from "./theme.js";
 type Step =
   | { kind: "pick" }
   | { kind: "key"; def: ProviderDef }
+  | { kind: "oauth"; def: ProviderDef }
   | { kind: "busy"; def: ProviderDef; text: string }
   | { kind: "error"; def: ProviderDef; text: string }
   | { kind: "local"; def: ProviderDef };
@@ -30,10 +32,16 @@ export function providerItems(cfg: AtlasConfig, L: Dict): SelectItem<ProviderDef
       value: def,
       on: connected,
       tag: isLocal(def) ? ("local" as const) : def.free ? ("free" as const) : ("paid" as const),
-      hint: connected ? L.connected : isLocal(def) ? L.noKeyNeeded : (def.signupUrl?.replace(/^https?:\/\//, "") ?? ""),
+      hint: connected ? L.connected : isLocal(def) ? L.noKeyNeeded : def.id === "openrouter" ? L.oauthHint : (def.signupUrl?.replace(/^https?:\/\//, "") ?? ""),
       group,
     };
   }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+}
+
+/** OpenRouter signs in through the browser (OAuth); others take a pasted key; local ones are probed. */
+function firstStep(def: ProviderDef): Step {
+  if (def.id === "openrouter") return { kind: "oauth", def };
+  return def.keyRequired ? { kind: "key", def } : { kind: "local", def };
 }
 
 /**
@@ -54,13 +62,21 @@ export function Connect({
   initial?: string;
 }) {
   const start = initial ? PROVIDERS.find((p) => p.id === initial) : undefined;
-  const [step, setStep] = useState<Step>(start ? (start.keyRequired ? { kind: "key", def: start } : { kind: "local", def: start }) : { kind: "pick" });
+  const [step, setStep] = useState<Step>(start ? firstStep(start) : { kind: "pick" });
+  const oauthAbort = useRef<AbortController | null>(null);
   const [key, setKey] = useState("");
 
   useInput(
-    (_i, k) => {
-      if (k.escape) onDone(null);
-      if (step.kind === "error" && k.return) setStep(step.def.keyRequired ? { kind: "key", def: step.def } : { kind: "pick" });
+    (i, k) => {
+      if (step.kind === "oauth" && i === "k") {
+        oauthAbort.current?.abort();
+        return setStep({ kind: "key", def: step.def });
+      }
+      if (k.escape) {
+        oauthAbort.current?.abort();
+        return onDone(null);
+      }
+      if (step.kind === "error" && k.return) setStep(step.def.keyRequired ? firstStep(step.def) : { kind: "pick" });
     },
     { isActive: step.kind !== "pick" },
   );
@@ -68,6 +84,7 @@ export function Connect({
   useEffect(() => {
     if (step.kind === "key" && step.def.signupUrl) openUrl(step.def.signupUrl);
     if (step.kind === "local") void connectLocal(step.def);
+    if (step.kind === "oauth") void signIn(step.def);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step.kind]);
 
@@ -91,6 +108,18 @@ export function Connect({
       onDone(`${shortName(def)} · ${models.length} ${L.modelsAvailable}`, def.id);
     } catch {
       setStep({ kind: "error", def, text: `${shortName(def)} ${L.notRunning} ${def.signupUrl}` });
+    }
+  }
+
+  async function signIn(def: ProviderDef) {
+    const ctrl = new AbortController();
+    oauthAbort.current = ctrl;
+    try {
+      const key = await loginOpenRouter({ signal: ctrl.signal });
+      await verify(def, key);
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      setStep({ kind: "error", def, text: (err as Error).message });
     }
   }
 
@@ -122,7 +151,7 @@ export function Connect({
         onCancel={() => onDone(null)}
         onSelect={(it) => {
           onStep?.(L.connectTitle, it.label);
-          setStep(it.value.keyRequired ? { kind: "key", def: it.value } : { kind: "local", def: it.value });
+          setStep(firstStep(it.value));
         }}
       />
     );
@@ -152,6 +181,16 @@ export function Connect({
           </Box>
           <Box paddingLeft={2}>
             <Text color={C.faint}>{L.keyStored}</Text>
+          </Box>
+        </>
+      )}
+      {step.kind === "oauth" && (
+        <>
+          <Text color={C.glow}>
+            <Spinner type="dots" /> {L.oauthWait}
+          </Text>
+          <Box paddingLeft={2}>
+            <Text color={C.faint}>{L.oauthManual}</Text>
           </Box>
         </>
       )}

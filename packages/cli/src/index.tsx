@@ -186,7 +186,7 @@ program
     }
     if (!prompt.trim()) fail("empty prompt");
     const messages: ChatMessage[] = [];
-    const system = opts.system ?? cfg.system;
+    const system = opts.system ?? cfg.system ?? t(detectLang(cfg)).identity;
     if (system) messages.push({ role: "system", content: system });
     messages.push({ role: "user", content: prompt });
     try {
