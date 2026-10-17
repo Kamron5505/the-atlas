@@ -1,11 +1,24 @@
 import { readyProviders, resolveProvider, type AtlasConfig, type ResolvedProvider } from "./config.js";
 import { ProviderError, streamChat, type ChatMessage, type ChatOptions } from "./client.js";
 
+/** Every candidate failed; `limited` = at least one hit its free limit. */
+export class RouteError extends Error {
+  constructor(readonly errors: ProviderError[]) {
+    super(`All providers failed:\n- ${errors.map((e) => e.message).join("\n- ")}`);
+    this.name = "RouteError";
+  }
+
+  get limited(): boolean {
+    return this.errors.some((e) => e.limited);
+  }
+}
+
 export interface RouteEvent {
   type: "provider" | "fallback";
   provider: string;
   model?: string;
   error?: string;
+  limited?: boolean;
 }
 
 export interface RouteOptions extends ChatOptions {
@@ -32,7 +45,7 @@ export function candidates(cfg: AtlasConfig, provider: string): ResolvedProvider
  */
 export async function* routeChat(cfg: AtlasConfig, messages: ChatMessage[], opts: RouteOptions = {}): AsyncGenerator<string> {
   const list = candidates(cfg, opts.provider ?? cfg.provider);
-  const errors: string[] = [];
+  const errors: ProviderError[] = [];
   for (const p of list) {
     // An explicit model only applies to a single explicit provider.
     const model = list.length === 1 ? (opts.model ?? p.model) : p.model;
@@ -46,9 +59,9 @@ export async function* routeChat(cfg: AtlasConfig, messages: ChatMessage[], opts
       return;
     } catch (err) {
       if (started || !(err instanceof ProviderError) || !err.retryable) throw err;
-      errors.push(err.message);
-      opts.onEvent?.({ type: "fallback", provider: p.def.id, error: err.message });
+      errors.push(err);
+      opts.onEvent?.({ type: "fallback", provider: p.def.id, error: err.message, limited: err.limited });
     }
   }
-  throw new Error(`All providers failed:\n- ${errors.join("\n- ")}`);
+  throw new RouteError(errors);
 }

@@ -3,6 +3,15 @@ import type { AtlasConfig } from "@the-atlas/core";
 export type Lang = "uz" | "ru" | "en";
 
 const en = {
+  tips: ["Type /connect to plug in a free AI (OpenRouter, Gemini, Groq, OmniRoute…)", "Type /model to pick any model · /agents for 45+ coding agents", "Just ask — Atlas switches AI by itself when a free limit ends"],
+  limitTitle: "free limit reached on",
+  switchTo: "Switch to",
+  chooseModel: "Choose another model…",
+  connectAnother: "Connect another AI…",
+  useAuto: "Auto — let Atlas pick a working free AI",
+  shortcuts: "/ commands · esc interrupt · ctrl+c quit",
+  switched: "limit reached → switched to",
+  interrupt: "esc to interrupt",
   tagline: "All AI assistants in one terminal",
   placeholder: "Ask anything…  (/help — commands)",
   thinking: "thinking",
@@ -15,6 +24,8 @@ const en = {
     "/provider <id|auto>      pick a provider; auto = free fallback chain",
     "/models                  list models of the current provider",
     "/clear                   clear the conversation",
+    "/connect                 connect an AI (opens its key page)",
+    "/agents                  45+ AI coding agents",
     "/lang uz|ru|en           change language",
     "/exit                    quit   ·   Esc — stop answer   ·   Ctrl+C — quit",
   ].join("\n"),
@@ -38,6 +49,15 @@ const en = {
 type Dict = typeof en;
 
 const uz: Dict = {
+  tips: ["/connect — bepul AI ulash (OpenRouter, Gemini, Groq, OmniRoute…)", "/model — istalgan modelni tanlash · /agents — 45+ kod agentlari", "Shunchaki so'rang — bepul limit tugasa Atlas o'zi boshqa AI'ga o'tadi"],
+  limitTitle: "bepul limit tugadi:",
+  switchTo: "O'tish:",
+  chooseModel: "Boshqa model tanlash…",
+  connectAnother: "Yana bir AI ulash…",
+  useAuto: "Auto — Atlas ishlaydigan bepul AI'ni o'zi tanlaydi",
+  shortcuts: "/ buyruqlar · esc to'xtatish · ctrl+c chiqish",
+  switched: "limit tugadi → o'tildi:",
+  interrupt: "esc — to'xtatish",
   tagline: "Barcha AI yordamchilar bitta terminalda",
   placeholder: "Istalgan savolni yozing…  (/help — buyruqlar)",
   thinking: "o'ylayapti",
@@ -50,6 +70,8 @@ const uz: Dict = {
     "/provider <id|auto>       provayder tanlash; auto = bepul zanjir",
     "/models                   joriy provayder modellari",
     "/clear                    suhbatni tozalash",
+    "/connect                  AI ulash (kalit sahifasi ochiladi)",
+    "/agents                   45+ AI kod agentlari",
     "/lang uz|ru|en            tilni almashtirish",
     "/exit                     chiqish   ·   Esc — javobni to'xtatish   ·   Ctrl+C — chiqish",
   ].join("\n"),
@@ -71,6 +93,15 @@ const uz: Dict = {
 };
 
 const ru: Dict = {
+  tips: ["/connect — подключить бесплатный ИИ (OpenRouter, Gemini, Groq, OmniRoute…)", "/model — выбрать любую модель · /agents — 45+ агентов для кода", "Просто спросите — когда бесплатный лимит кончится, Atlas сам переключит ИИ"],
+  limitTitle: "закончился бесплатный лимит:",
+  switchTo: "Переключиться на",
+  chooseModel: "Выбрать другую модель…",
+  connectAnother: "Подключить ещё один ИИ…",
+  useAuto: "Авто — Atlas сам выберет рабочий бесплатный ИИ",
+  shortcuts: "/ команды · esc стоп · ctrl+c выход",
+  switched: "лимит закончился → переключился на",
+  interrupt: "esc — стоп",
   tagline: "Все ИИ-ассистенты в одном терминале",
   placeholder: "Спросите что угодно…  (/help — команды)",
   thinking: "думает",
@@ -83,6 +114,8 @@ const ru: Dict = {
     "/provider <id|auto>        выбрать провайдера; auto = бесплатная цепочка",
     "/models                    модели текущего провайдера",
     "/clear                     очистить диалог",
+    "/connect                   подключить ИИ (откроется страница ключа)",
+    "/agents                    45+ ИИ-агентов для кода",
     "/lang uz|ru|en             сменить язык",
     "/exit                      выход   ·   Esc — остановить ответ   ·   Ctrl+C — выход",
   ].join("\n"),

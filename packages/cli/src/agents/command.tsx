@@ -19,6 +19,20 @@ function printList(rows: MenuRow[]): void {
   console.log("\x1b[90m🆓 free · 🔑 API key · 🌐 browser login · 💳 subscription\x1b[0m");
 }
 
+export async function runAgentsMenu(opts: { free?: boolean; installed?: boolean; list?: boolean } = {}): Promise<void> {
+  let rows = rowsFor(loadAgents());
+  if (opts.free) rows = rows.filter((r) => r.agent.authClass === "free");
+  if (opts.installed) rows = rows.filter((r) => r.installed);
+  if (opts.list || !process.stdin.isTTY) return printList(rows);
+
+  let picked: MenuResult | null = null;
+  const app = render(<AgentMenu rows={rows} onPick={(r) => (picked = r)} />);
+  await app.waitUntilExit();
+  const choice = picked as MenuResult | null;
+  if (!choice) return;
+  process.exitCode = await launchAgent(choice.agent, [], { free: choice.free });
+}
+
 export function registerAgents(program: Command): void {
   program
     .command("agents")
@@ -26,19 +40,7 @@ export function registerAgents(program: Command): void {
     .option("-l, --list", "print the catalog")
     .option("-f, --free", "only free agents")
     .option("-i, --installed", "only installed agents")
-    .action(async (opts: { list?: boolean; free?: boolean; installed?: boolean }) => {
-      let rows = rowsFor(loadAgents());
-      if (opts.free) rows = rows.filter((r) => r.agent.authClass === "free");
-      if (opts.installed) rows = rows.filter((r) => r.installed);
-      if (opts.list || !process.stdin.isTTY) return printList(rows);
-
-      let picked: MenuResult | null = null;
-      const app = render(<AgentMenu rows={rows} onPick={(r) => (picked = r)} />);
-      await app.waitUntilExit();
-      const choice = picked as MenuResult | null;
-      if (!choice) return;
-      process.exitCode = await launchAgent(choice.agent, [], { free: choice.free });
-    });
+    .action((opts: { list?: boolean; free?: boolean; installed?: boolean }) => runAgentsMenu(opts));
 
   program
     .command("run")

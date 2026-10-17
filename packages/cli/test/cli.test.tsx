@@ -3,13 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_CONFIG } from "@the-atlas/core";
 import { render } from "ink-testing-library";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { classifyAuth, findAgent, loadAgents, parseCatalog } from "../src/agents/catalog.js";
 import { AgentMenu, sortRows, type MenuRow } from "../src/agents/Menu.js";
 import { atlasWiring } from "../src/agents/run.js";
 import { Chat } from "../src/ui/Chat.js";
 
-const tick = () => new Promise((r) => setTimeout(r, 30));
+const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
+const ENTER = "\r";
 
 beforeEach(() => {
   process.env.ATLAS_HOME = mkdtempSync(join(tmpdir(), "atlas-cli-"));
@@ -51,7 +52,7 @@ describe("agents menu", () => {
     await tick();
     expect(ui.lastFrame()).toContain("Beta");
     expect(ui.lastFrame()).not.toContain("Gamma");
-    ui.stdin.write("\r");
+    ui.stdin.write(ENTER);
     await tick();
     expect(onPick).toHaveBeenCalledWith({ agent: agents[1], free: false });
   });
@@ -66,34 +67,75 @@ describe("atlas wiring", () => {
   });
 });
 
+const sseBody = (text: string) => {
+  const enc = new TextEncoder();
+  return new ReadableStream({
+    start(c) {
+      c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n`));
+      c.close();
+    },
+  });
+};
+
 describe("chat", () => {
-  it("shows banner, onboarding hint and /help", async () => {
-    const cfg = { ...structuredClone(DEFAULT_CONFIG), order: [] as string[] };
-    const ui = render(<Chat cfg={{ ...cfg, keys: {}, order: ["groq"] }} version="0.0.0" initialLang="en" />);
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("opens the connect wizard when no AI is connected", async () => {
+    const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: {}, order: ["groq"] };
+    const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="en" />);
     await tick();
-    expect(ui.lastFrame()).toContain("the-atlas v0.0.0");
-    ui.stdin.write("/help");
+    expect(ui.lastFrame()).toContain("Welcome to The Atlas");
+    expect(ui.lastFrame()).toContain("Connect an AI");
+    expect(ui.lastFrame()).toContain("OpenRouter");
+  });
+
+  it("slash menu autocompletes and /help works", async () => {
+    const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: { groq: "k" }, order: ["groq"] };
+    const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="en" />);
     await tick();
-    ui.stdin.write("\r");
+    ui.stdin.write("/he");
+    await tick();
+    expect(ui.lastFrame()).toContain("/help");
+    ui.stdin.write(ENTER);
     await tick();
     expect(ui.lastFrame()).toContain("/provider");
   });
 
   it("streams an answer with provider meta", async () => {
-    const enc = new TextEncoder();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(new ReadableStream({ start(c) { c.enqueue(enc.encode('data: {"choices":[{"delta":{"content":"Salom!"}}]}\n\ndata: [DONE]\n')); c.close(); } }), { status: 200 })),
-    );
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(sseBody("Salom!"), { status: 200 })));
     const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: { groq: "k" }, order: ["groq"] };
     const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="uz" />);
     await tick();
     ui.stdin.write("hi");
     await tick();
-    ui.stdin.write("\r");
-    await new Promise((r) => setTimeout(r, 150));
+    ui.stdin.write(ENTER);
+    await tick(150);
     expect(ui.lastFrame()).toContain("Salom!");
     expect(ui.lastFrame()).toContain("groq/llama-3.3-70b-versatile");
-    vi.unstubAllGlobals();
+  });
+
+  it("on free limit offers to switch AI and retries the question", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        urls.push(url);
+        if (url.includes("groq")) return new Response(JSON.stringify({ error: { message: "Rate limit reached" } }), { status: 429 });
+        return new Response(sseBody("Gemini javobi"), { status: 200 });
+      }),
+    );
+    const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: { groq: "a", gemini: "b" }, order: ["groq", "gemini"], provider: "groq" };
+    const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="en" />);
+    await tick();
+    ui.stdin.write("savol");
+    await tick();
+    ui.stdin.write(ENTER);
+    await tick(120);
+    expect(ui.lastFrame()).toContain("free limit reached on groq");
+    expect(ui.lastFrame()).toContain("Switch to Google Gemini");
+    ui.stdin.write(ENTER);
+    await tick(150);
+    expect(ui.lastFrame()).toContain("Gemini javobi");
+    expect(urls.at(-1)).toContain("generativelanguage");
   });
 });

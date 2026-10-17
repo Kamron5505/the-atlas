@@ -16,7 +16,10 @@ import { randomBytes } from "node:crypto";
 import { detectLang, isLang, t } from "./i18n.js";
 import { readHidden } from "./prompt.js";
 import { Chat } from "./ui/Chat.js";
-import { registerAgents } from "./agents/command.js";
+import { registerAgents, runAgentsMenu } from "./agents/command.js";
+import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "./system.js";
+import { Connect } from "./ui/Connect.js";
+import type { ChatExit } from "./ui/Chat.js";
 import { doctor } from "./doctor.js";
 
 declare const __VERSION__: string | undefined;
@@ -69,12 +72,59 @@ program
   .description("interactive chat (default)")
   .option("-p, --provider <id>", "provider id or auto")
   .option("-m, --model <model>", "model id")
-  .action((opts: { provider?: string; model?: string }) => {
+  .action(async (opts: { provider?: string; model?: string }) => {
     const cfg = loadConfig();
     if (opts.provider) cfg.provider = opts.provider;
     if (opts.model && cfg.provider !== "auto") cfg.models[cfg.provider] = opts.model;
     if (!process.stdin.isTTY) fail("chat needs a terminal; use: atlas ask \"…\"");
-    render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} />, { exitOnCtrlC: true });
+    let next: ChatExit = { kind: "quit" };
+    const app = render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} onExit={(e) => (next = e)} />, { exitOnCtrlC: true });
+    await app.waitUntilExit();
+    if ((next as ChatExit).kind === "agents") await runAgentsMenu();
+  });
+
+program
+  .command("connect")
+  .argument("[provider]", "provider id")
+  .description("connect an AI: pick → browser opens → paste key → verified")
+  .action(async (id: string | undefined) => {
+    const cfg = loadConfig();
+    let msg: string | null = null;
+    const app = render(<Connect cfg={cfg} initial={id} onDone={(m) => ((msg = m), app.unmount())} />);
+    await app.waitUntilExit();
+    if (msg) console.log(c.green(`✓ ${msg}`));
+  });
+
+program
+  .command("omniroute")
+  .description("install/start the local OmniRoute gateway and connect it")
+  .option("--url <url>", "use a remote OmniRoute instead (e.g. https://gw.example.com/v1)")
+  .option("--key <key>", "API key for a remote OmniRoute")
+  .action(async (opts: { url?: string; key?: string }) => {
+    const cfg = loadConfig();
+    if (opts.url) {
+      cfg.baseURLs.omniroute = opts.url.replace(/\/+$/, "");
+      if (opts.key) cfg.keys.omniroute = opts.key;
+      saveConfig(cfg);
+    }
+    const base = cfg.baseURLs.omniroute ?? `${OMNIROUTE_URL}/v1`;
+    if (await omnirouteUp(base)) {
+      console.log(c.green(`● OmniRoute is running: ${base}`));
+    } else if (opts.url) {
+      fail(`OmniRoute at ${base} is not reachable`);
+    } else {
+      if (!omnirouteInstalled()) {
+        console.log("Installing OmniRoute: npm install -g omniroute@latest …");
+        if ((await installOmniroute()) !== 0) fail("install failed — run: npm install -g omniroute");
+      }
+      console.log("Starting OmniRoute…");
+      if (!(await startOmniroute())) fail("OmniRoute did not start — run `omniroute` manually");
+      console.log(c.green(`● OmniRoute is running: ${OMNIROUTE_URL}`));
+      openUrl(OMNIROUTE_URL);
+    }
+    cfg.order = ["omniroute", ...cfg.order.filter((x) => x !== "omniroute")];
+    saveConfig(cfg);
+    console.log(c.gray("OmniRoute is now first in the auto chain. Add accounts/keys in its dashboard."));
   });
 
 program

@@ -2,6 +2,7 @@ import { Box, Text, useApp, useInput, useWindowSize } from "ink";
 import { useMemo, useState } from "react";
 import type { Agent, AuthClass } from "./catalog.js";
 import { ATLAS_READY } from "./run.js";
+import { C } from "../ui/theme.js";
 
 export const AUTH_BADGE: Record<AuthClass, { icon: string; color: string }> = {
   free: { icon: "🆓", color: "green" },
@@ -83,73 +84,73 @@ export function AgentMenu({ rows, onPick }: { rows: MenuRow[]; onPick: (r: MenuR
         const b = AUTH_BADGE[r.agent.authClass];
         return (
           <Text key={r.agent.name} wrap="truncate">
-            <Text color={active ? "magentaBright" : "gray"}>{active ? "❯ " : "  "}</Text>
-            <Text color={r.installed ? "green" : "gray"}>{r.installed ? "●" : "○"} </Text>
-            <Text bold={active} color={active ? "white" : undefined}>
+            <Text color={active ? C.neon : C.faint}>{active ? "❯ " : "  "}</Text>
+            <Text color={r.installed ? C.ok : C.faint}>{r.installed ? "●" : "○"} </Text>
+            <Text bold={active} color={active ? C.text : C.user}>
               {r.agent.name}
             </Text>
             <Text> {b.icon}</Text>
-            {r.last && <Text color="cyan"> ↩</Text>}
-            {r.uses > 0 && <Text color="gray"> {r.uses}×</Text>}
+            {r.last && <Text color={C.glow}> ↩</Text>}
+            {r.uses > 0 && <Text color={C.dim}> {r.uses}×</Text>}
           </Text>
         );
       })}
-      {filtered.length === 0 && <Text color="gray">  —</Text>}
+      {filtered.length === 0 && <Text color={C.dim}>  —</Text>}
     </Box>
   );
 
   const details = sel && (
-    <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1} flexGrow={1} marginLeft={wide ? 1 : 0}>
-      <Text bold color="magentaBright">
-        {sel.agent.name} <Text color={sel.installed ? "green" : "gray"}>{sel.installed ? "● installed" : "○ not installed"}</Text>
+    <Box flexDirection="column" borderStyle="round" borderColor={C.neon} paddingX={1} flexGrow={1} marginLeft={wide ? 1 : 0}>
+      <Text bold color={C.neon}>
+        {sel.agent.name} <Text color={sel.installed ? C.ok : C.faint}>{sel.installed ? "● installed" : "○ not installed"}</Text>
       </Text>
       <Text>{sel.agent.description}</Text>
       <Text> </Text>
       <Text>
-        <Text color="gray">command  </Text>
+        <Text color={C.dim}>command  </Text>
         {sel.agent.command}
       </Text>
       <Text>
-        <Text color="gray">group    </Text>
+        <Text color={C.dim}>group    </Text>
         {sel.agent.category}
       </Text>
       <Text>
-        <Text color="gray">login    </Text>
+        <Text color={C.dim}>login    </Text>
         <Text color={AUTH_BADGE[sel.agent.authClass].color}>{sel.agent.auth || "—"}</Text>
       </Text>
       {sel.agent.url && (
         <Text wrap="truncate">
-          <Text color="gray">link     </Text>
-          <Text color="cyan">{sel.agent.url}</Text>
+          <Text color={C.dim}>link     </Text>
+          <Text color={C.glow}>{sel.agent.url}</Text>
         </Text>
       )}
       {!sel.installed && sel.agent.install && (
         <Text wrap="truncate">
-          <Text color="gray">install  </Text>
+          <Text color={C.dim}>install  </Text>
           {sel.agent.install}
         </Text>
       )}
-      {ATLAS_READY.has(sel.agent.binary) && <Text color="green">⚡ works with Atlas free models (Tab)</Text>}
+      {ATLAS_READY.has(sel.agent.binary) && <Text color={C.ok}>⚡ works with Atlas free models (Tab)</Text>}
     </Box>
   );
 
   return (
     <Box flexDirection="column">
       <Text>
-        <Text color="magentaBright" bold>
+        <Text color={C.neon} bold>
           ◆ ATLAS agents{" "}
         </Text>
-        <Text color="gray">
+        <Text color={C.dim}>
           {installedCount}/{rows.length} installed ·{" "}
         </Text>
-        <Text color="cyan">🔎 {query || "type to search"}</Text>
+        <Text color={C.glow}>🔎 {query || "type to search"}</Text>
       </Text>
       <Box flexDirection={wide ? "row" : "column"} marginTop={1}>
         {list}
         {details}
       </Box>
-      <Text color="gray">
-        ↑↓ move · ⏎ launch · Tab {free ? <Text color="green">[⚡ Atlas free models ON]</Text> : "Atlas free models off"} · Esc quit · 🆓 free 🔑 key 🌐 login 💳 paid
+      <Text color={C.dim}>
+        ↑↓ move · ⏎ launch · Tab {free ? <Text color={C.ok}>[⚡ Atlas free models ON]</Text> : "Atlas free models off"} · Esc quit · 🆓 free 🔑 key 🌐 login 💳 paid
       </Text>
     </Box>
   );

@@ -22,6 +22,11 @@ export class ProviderError extends Error {
     this.name = "ProviderError";
   }
 
+  /** Free quota / rate limit used up — the user should switch AI or model. */
+  get limited(): boolean {
+    return this.status === 429 || this.status === 402 || /quota|rate.?limit|credits|exhausted|limit reached/i.test(this.message);
+  }
+
   /** Worth trying the next provider (rate limit, outage, bad key, unreachable). */
   get retryable(): boolean {
     return this.status === undefined || this.status === 401 || this.status === 403 || this.status === 404 || this.status === 408 || this.status === 429 || this.status >= 500;
