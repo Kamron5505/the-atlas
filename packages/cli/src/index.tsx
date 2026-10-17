@@ -17,6 +17,9 @@ import { detectLang, isLang, t } from "./i18n.js";
 import { readHidden } from "./prompt.js";
 import { Chat } from "./ui/Chat.js";
 import { printLogo } from "./ui/intro.js";
+import { lastSession } from "./session.js";
+import { claudeStatusline } from "./statusline.js";
+import { installClaudeStatusline } from "./statusline-install.js";
 import { a } from "./ui/ansi.js";
 import { registerAgents, runAgentsMenu } from "./agents/command.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "./system.js";
@@ -68,16 +71,36 @@ program
   .description("interactive chat (default)")
   .option("-p, --provider <id>", "provider id or auto")
   .option("-m, --model <model>", "model id")
-  .action(async (opts: { provider?: string; model?: string }) => {
+  .option("-c, --continue", "continue the last chat in this folder")
+  .action(async (opts: { provider?: string; model?: string; continue?: boolean }) => {
     const cfg = loadConfig();
     if (opts.provider) cfg.provider = opts.provider;
     if (opts.model && cfg.provider !== "auto") cfg.models[cfg.provider] = opts.model;
     if (!process.stdin.isTTY) fail("chat needs a terminal; use: atlas ask \"…\"");
+    const resumed = opts.continue ? lastSession(process.cwd()) : undefined;
     await printLogo();
     let next: ChatExit = { kind: "quit" };
-    const app = render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} onExit={(e) => (next = e)} />, { exitOnCtrlC: true });
+    const app = render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} initialSession={resumed} onExit={(e) => (next = e)} />, {
+      exitOnCtrlC: true,
+    });
     await app.waitUntilExit();
     if ((next as ChatExit).kind === "agents") await runAgentsMenu();
+  });
+
+program
+  .command("statusline")
+  .description("status line for Claude Code (reads its JSON on stdin); --install claude to enable it")
+  .option("--install <agent>", "install into an agent's settings (supported: claude)")
+  .option("-y, --yes", "do not ask before changing settings")
+  .action(async (opts: { install?: string; yes?: boolean }) => {
+    if (opts.install) {
+      if (opts.install !== "claude") fail(`only Claude Code exposes a status line API (got: ${opts.install})`);
+      process.exitCode = (await installClaudeStatusline(!!opts.yes)) ? 0 : 1;
+      return;
+    }
+    let json = "";
+    if (!process.stdin.isTTY) for await (const chunk of process.stdin) json += chunk;
+    process.stdout.write(`${claudeStatusline(json)}\n`);
   });
 
 program

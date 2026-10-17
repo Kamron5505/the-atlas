@@ -1,15 +1,25 @@
 import type { ResolvedProvider } from "./config.js";
 import type { ModelInfo } from "./providers.js";
 
+/** OpenAI-style multimodal part (text or an image as a data: URL). */
+export type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 }
 
 export interface ChatOptions {
   model?: string;
   temperature?: number;
   signal?: AbortSignal;
+  /** Called with the provider's response headers (rate-limit counters live there). */
+  onResponse?: (provider: string, headers: Headers) => void;
+}
+
+/** Plain text of a message (images dropped) — for token estimates and exports. */
+export function messageText(m: ChatMessage): string {
+  return typeof m.content === "string" ? m.content : m.content.map((p) => (p.type === "text" ? p.text : "[image]")).join("\n");
 }
 
 export class ProviderError extends Error {
@@ -110,6 +120,7 @@ export async function* streamChat(p: ResolvedProvider, messages: ChatMessage[], 
     body: JSON.stringify({ model, messages, stream: true, temperature: opts.temperature }),
     signal: opts.signal,
   });
+  opts.onResponse?.(p.def.id, res.headers);
   if (!res.body) throw new ProviderError(`${p.def.name}: empty response`, p.def.id, 502);
   yield* parseSSE(res.body);
 }

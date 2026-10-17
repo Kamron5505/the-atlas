@@ -11,7 +11,8 @@ export interface ModelChoice {
   model?: string;
 }
 
-const cache = new Map<string, ModelInfo[]>();
+/** Live model lists per provider (also read by the status line for context size / pricing). */
+export const modelCache = new Map<string, ModelInfo[]>();
 
 /** Live models from every connected AI, free first; top item = auto chain. */
 export function ModelPicker({ cfg, L, onDone }: { cfg: AtlasConfig; L: Dict; onDone: (c: ModelChoice | null) => void }) {
@@ -22,11 +23,11 @@ export function ModelPicker({ cfg, L, onDone }: { cfg: AtlasConfig; L: Dict; onD
     const ready = readyProviders(cfg);
     Promise.all(
       ready.map(async (p) => {
-        const cached = cache.get(p.def.id);
+        const cached = modelCache.get(p.def.id);
         if (cached) return { p, models: cached };
         try {
           const models = await listModels(p, AbortSignal.timeout(6000));
-          cache.set(p.def.id, models);
+          modelCache.set(p.def.id, models);
           return { p, models };
         } catch {
           return { p, models: [] as ModelInfo[] };
