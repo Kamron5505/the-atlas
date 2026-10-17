@@ -16,7 +16,7 @@ import { randomBytes } from "node:crypto";
 import { detectLang, isLang, t } from "./i18n.js";
 import { readHidden } from "./prompt.js";
 import { Chat } from "./ui/Chat.js";
-import { printLogo } from "./ui/intro.js";
+import { clearOnExit, printLogo } from "./ui/intro.js";
 import { lastSession } from "./session.js";
 import { claudeStatusline } from "./statusline.js";
 import { installClaudeStatusline } from "./statusline-install.js";
@@ -78,12 +78,21 @@ program
     if (opts.model && cfg.provider !== "auto") cfg.models[cfg.provider] = opts.model;
     if (!process.stdin.isTTY) fail("chat needs a terminal; use: atlas ask \"…\"");
     const resumed = opts.continue ? lastSession(process.cwd()) : undefined;
+    // Ctrl+C during the logo animation: still clean up.
+    const onSig = () => {
+      clearOnExit();
+      process.exit(130);
+    };
+    process.once("SIGINT", onSig);
     await printLogo();
+    process.off("SIGINT", onSig);
     let next: ChatExit = { kind: "quit" };
     const app = render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} initialSession={resumed} onExit={(e) => (next = e)} />, {
       exitOnCtrlC: true,
     });
     await app.waitUntilExit();
+    app.cleanup();
+    clearOnExit();
     if ((next as ChatExit).kind === "agents") await runAgentsMenu();
   });
 

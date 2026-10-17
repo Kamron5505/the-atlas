@@ -162,3 +162,88 @@ describe("serve", () => {
     }
   });
 });
+
+describe("free-model fallback (OpenRouter) and silent local skip", () => {
+  beforeEach(async () => {
+    process.env.ATLAS_HOME = mkdtempSync(join(tmpdir(), "atlas-route-"));
+    (await import("../src/models.js")).clearModelCaches();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("tries other free models when the default one 404s / 429s, skips dead local gateways", async () => {
+    const tried: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.includes("localhost") || url.includes("127.0.0.1")) throw new TypeError("fetch failed");
+        if (url.endsWith("/models")) {
+          return new Response(
+            JSON.stringify({
+              data: [
+                { id: "openrouter/free", pricing: { prompt: "0", completion: "0" } },
+                { id: "busy/model:free", pricing: { prompt: "0", completion: "0" } },
+                { id: "good/model:free", pricing: { prompt: "0", completion: "0" } },
+                { id: "x/safety-guard:free", pricing: { prompt: "0", completion: "0" } },
+                { id: "paid/model", pricing: { prompt: "0.001", completion: "0.002" } },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        const model = (JSON.parse(String(init!.body)) as { model: string }).model;
+        tried.push(model);
+        if (model === "gone/old:free") return new Response(JSON.stringify({ error: { message: "This model is unavailable for free" } }), { status: 404 });
+        if (model === "busy/model:free") return new Response(JSON.stringify({ error: { message: "Provider returned error" } }), { status: 429 });
+        return new Response(sse([delta(`hi from ${model}`), "data: [DONE]"]), { status: 200 });
+      }),
+    );
+    const cfg = cfgWith({ openrouter: "k" }, ["openrouter", "omniroute", "ollama"]);
+    cfg.models.openrouter = "gone/old:free";
+    const events: RouteEvent[] = [];
+    const out = await collect(routeChat(cfg, [{ role: "user", content: "hi" }], { onEvent: (e) => events.push(e) }));
+    expect(tried).toEqual(["gone/old:free", "openrouter/free"]);
+    expect(out).toBe("hi from openrouter/free");
+    expect(events.filter((e) => e.type === "fallback").map((e) => e.provider)).toEqual(["openrouter"]);
+  });
+
+  it("does not try other models on a non-model error (401 bad key)", async () => {
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "a:free", pricing: { prompt: "0", completion: "0" } }] }), { status: 200 });
+        calls++;
+        return new Response("{}", { status: 401 });
+      }),
+    );
+    await expect(collect(routeChat(cfgWith({ openrouter: "bad" }, ["openrouter"]), [{ role: "user", content: "x" }], { provider: "openrouter" }))).rejects.toThrow("HTTP 401");
+    expect(calls).toBe(1);
+  });
+});
+
+describe("free-model fallback when the router itself is busy", () => {
+  beforeEach(async () => {
+    process.env.ATLAS_HOME = mkdtempSync(join(tmpdir(), "atlas-route2-"));
+    (await import("../src/models.js")).clearModelCaches();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("default router 429 → next free model answers", async () => {
+    const tried: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/models")) {
+          return new Response(JSON.stringify({ data: [{ id: "busy/model:free", pricing: { prompt: "0", completion: "0" } }, { id: "good/model:free", pricing: { prompt: "0", completion: "0" } }] }), { status: 200 });
+        }
+        const model = (JSON.parse(String(init!.body)) as { model: string }).model;
+        tried.push(model);
+        if (model !== "good/model:free") return new Response(JSON.stringify({ error: { message: "Provider returned error" } }), { status: 429 });
+        return new Response(sse([delta("ok"), "data: [DONE]"]), { status: 200 });
+      }),
+    );
+    const out = await collect(routeChat(cfgWith({ openrouter: "k" }, ["openrouter"]), [{ role: "user", content: "hi" }], { provider: "openrouter" }));
+    expect(out).toBe("ok");
+    expect(tried).toEqual(["openrouter/free", "busy/model:free", "good/model:free"]);
+  });
+});

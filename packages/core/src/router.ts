@@ -1,5 +1,6 @@
 import { readyProviders, resolveProvider, type AtlasConfig, type ResolvedProvider } from "./config.js";
 import { ProviderError, streamChat, type ChatMessage, type ChatOptions } from "./client.js";
+import { cachedModels, freeChatModels, reachable } from "./models.js";
 
 /** Every candidate failed; `limited` = at least one hit its free limit. */
 export class RouteError extends Error {
@@ -27,6 +28,9 @@ export interface RouteOptions extends ChatOptions {
   onEvent?: (e: RouteEvent) => void;
 }
 
+/** How many extra free models of the same provider to try before moving on. */
+const MODEL_RETRIES = 2;
+
 export function candidates(cfg: AtlasConfig, provider: string): ResolvedProvider[] {
   if (provider !== "auto") {
     const p = resolveProvider(cfg, provider);
@@ -35,33 +39,74 @@ export function candidates(cfg: AtlasConfig, provider: string): ResolvedProvider
     return [p];
   }
   const ready = readyProviders(cfg);
-  if (ready.length === 0) throw new Error("No providers configured. Run: atlas keys add openrouter");
+  if (ready.length === 0) throw new Error("No providers configured. Run: atlas connect");
   return ready;
 }
 
 /**
- * Streams a reply, falling back to the next provider on retryable errors.
+ * Models to try on one provider: the chosen/default one, then (when the provider
+ * lists free models, e.g. OpenRouter) a couple of other free ones — free models
+ * there often 404 ("no longer free") or 429 (upstream busy).
+ */
+async function modelsToTry(p: ResolvedProvider, explicit: string | undefined, signal?: AbortSignal): Promise<string[]> {
+  const first = explicit ?? p.model;
+  const needList = !first || !!p.def.freeModelFilter;
+  const list = needList ? await cachedModels(p, signal) : [];
+  const out: string[] = [];
+  if (first) out.push(first);
+  else {
+    const pick = freeChatModels(list)[0] ?? list[0];
+    if (pick) out.push(pick.id);
+  }
+  if (p.def.freeModelFilter) {
+    // The provider's own default (e.g. the openrouter/free router) is the best second try.
+    const backups = [p.def.defaultModel, ...freeChatModels(list).map((m) => m.id)];
+    for (const id of backups) {
+      if (out.length > MODEL_RETRIES) break;
+      if (id && !out.includes(id)) out.push(id);
+    }
+  }
+  return out;
+}
+
+/** Errors where another model of the same provider may still work. */
+const modelLevel = (e: ProviderError) => e.status === 404 || e.status === 429 || e.status === 502 || e.status === 503;
+
+/**
+ * Streams a reply, falling back to other free models, then to the next provider.
  * Fallback only happens before the first token, so output is never mixed.
+ * Local gateways that aren't running are skipped silently in auto mode.
  */
 export async function* routeChat(cfg: AtlasConfig, messages: ChatMessage[], opts: RouteOptions = {}): AsyncGenerator<string> {
   const list = candidates(cfg, opts.provider ?? cfg.provider);
+  const auto = list.length > 1;
   const errors: ProviderError[] = [];
   for (const p of list) {
+    if (auto && !p.def.keyRequired && !(await reachable(p))) continue;
     // An explicit model only applies to a single explicit provider.
-    const model = list.length === 1 ? (opts.model ?? p.model) : p.model;
-    opts.onEvent?.({ type: "provider", provider: p.def.id, model });
-    let started = false;
-    try {
-      for await (const chunk of streamChat(p, messages, { ...opts, model })) {
-        started = true;
-        yield chunk;
+    const models = await modelsToTry(p, auto ? undefined : opts.model, opts.signal);
+    if (!models.length) {
+      errors.push(new ProviderError(`${p.def.name}: no model available`, p.def.id, 404));
+      continue;
+    }
+    for (const [i, model] of models.entries()) {
+      opts.onEvent?.({ type: "provider", provider: p.def.id, model });
+      let started = false;
+      try {
+        for await (const chunk of streamChat(p, messages, { ...opts, model })) {
+          started = true;
+          yield chunk;
+        }
+        return;
+      } catch (err) {
+        if (started || !(err instanceof ProviderError) || !err.retryable) throw err;
+        errors.push(err);
+        const lastHere = i === models.length - 1 || !modelLevel(err);
+        opts.onEvent?.({ type: "fallback", provider: p.def.id, model, error: err.message, limited: err.limited });
+        if (lastHere) break;
       }
-      return;
-    } catch (err) {
-      if (started || !(err instanceof ProviderError) || !err.retryable) throw err;
-      errors.push(err);
-      opts.onEvent?.({ type: "fallback", provider: p.def.id, error: err.message, limited: err.limited });
     }
   }
+  if (!errors.length) throw new Error("No AI is reachable. Run: atlas connect");
   throw new RouteError(errors);
 }

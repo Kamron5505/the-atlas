@@ -356,8 +356,8 @@ export function Chat({
             used = { provider: e.provider, model: e.model };
             setStatus(meta);
           } else {
-            if (e.limited) recordLimited(e.provider);
-            push(entry("info", `${e.provider} · ${e.limited ? L.switched : L.fallback}`));
+            // One busy free model is not the provider's quota — only RouteError marks limits.
+            push(entry("info", `${e.provider}/${e.model ?? "?"} · ${e.limited ? L.switched : L.fallback}`));
           }
         },
       })) {

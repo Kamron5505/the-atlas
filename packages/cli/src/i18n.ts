@@ -46,8 +46,8 @@ const en = {
   placeholder: "Ask anything · / commands · @ files",
   thinking: "Thinking",
   interrupt: "esc to stop",
-  fallback: "did not answer, trying next",
-  switched: "free limit reached, trying next",
+  fallback: "did not answer, trying another",
+  switched: "busy or out of free quota, trying another",
   cancelled: "stopped",
   shortcuts: "/ commands · ↑↓ history · esc clear · ctrl+c quit",
   cmd: {
@@ -184,8 +184,8 @@ const uz: Dict = {
   placeholder: "Istalgan savol · / buyruqlar · @ fayllar",
   thinking: "O'ylayapti",
   interrupt: "esc — to'xtatish",
-  fallback: "javob bermadi, keyingisi",
-  switched: "bepul limit tugadi, keyingisi",
+  fallback: "javob bermadi, boshqasini sinayapman",
+  switched: "band yoki bepul limit tugadi, boshqasini sinayapman",
   cancelled: "to'xtatildi",
   shortcuts: "/ buyruqlar · ↑↓ tarix · esc tozalash · ctrl+c chiqish",
   cmd: {
@@ -314,8 +314,8 @@ const ru: Dict = {
   placeholder: "Спросите что угодно · / команды · @ файлы",
   thinking: "Думаю",
   interrupt: "esc — стоп",
-  fallback: "не ответил, пробую следующий",
-  switched: "кончился бесплатный лимит, пробую следующий",
+  fallback: "не ответила, пробую другую",
+  switched: "занята или кончился лимит, пробую другую",
   cancelled: "остановлено",
   shortcuts: "/ команды · ↑↓ история · esc очистить · ctrl+c выход",
   cmd: {

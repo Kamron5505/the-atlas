@@ -31,7 +31,8 @@ export const PROVIDERS: ProviderDef[] = [
     baseURL: "https://openrouter.ai/api/v1",
     envKey: "OPENROUTER_API_KEY",
     keyRequired: true,
-    defaultModel: "meta-llama/llama-3.3-70b-instruct:free",
+    // Router that always points at a currently-free model.
+    defaultModel: "openrouter/free",
     free: true,
     signupUrl: "https://openrouter.ai/keys",
     freeModelFilter: (m) =>

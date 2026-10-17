@@ -42,6 +42,15 @@ export function logoRows(count: number, color = true): string[] {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * Wipes what Atlas printed when it exits (screen + scrollback, like `cls`) and
+ * restores the cursor. ATLAS_KEEP_SCREEN=1 keeps the transcript instead.
+ */
+export function clearOnExit(): void {
+  if (!process.stdout.isTTY) return;
+  process.stdout.write(process.env.ATLAS_KEEP_SCREEN ? "\x1b[?25h" : "\x1b[?25h\x1b[2J\x1b[3J\x1b[H");
+}
+
+/**
  * Prints ATLAS letter by letter (typewriter), then leaves it on screen.
  * Static (no animation) when output is not a terminal or ATLAS_NO_ANIM is set.
  */
