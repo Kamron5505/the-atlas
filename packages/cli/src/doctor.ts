@@ -3,11 +3,14 @@ import { execSync } from "node:child_process";
 import { which } from "./agents/catalog.js";
 
 import { a } from "./ui/ansi.js";
+import { colorDepth, emojiSupported, legacyConhost, terminalName, unicodeSupported } from "./ui/term.js";
+import { I } from "./ui/theme.js";
 
-const ok = (s: string) => `  ${a.ok("✓")} ${s}`;
-const warn = (s: string) => `  ${a.warn("!")} ${s}`;
-const bad = (s: string) => `  ${a.err("✗")} ${s}`;
+const ok = (s: string) => `  ${a.ok(I.ok)} ${s}`;
+const warn = (s: string) => `  ${a.warn(I.warn)} ${s}`;
+const bad = (s: string) => `  ${a.err(I.fail)} ${s}`;
 const ms = (n: number) => (n < 300 ? a.ok : n < 1000 ? a.warn : a.err)(`${n} ms`.padStart(7));
+const head = (s: string) => a.neon(a.bold(`${I.brand} ${s}`));
 
 const TOOL_HINT: Record<string, string> = {
   npm: "install Node.js 22+: https://nodejs.org",
@@ -28,8 +31,27 @@ function version(bin: string): string | undefined {
   }
 }
 
+const DEPTH_NAME = { 1: "off", 4: "16 colours", 8: "256 colours", 24: "truecolor" } as const;
+
+/** Terminal section: what Atlas detected, so a plain-looking UI can be explained. */
+export function terminalReport(): string[] {
+  const e = process.env;
+  const depth = colorDepth();
+  const why = e.NO_COLOR ? " (NO_COLOR)" : e.FORCE_COLOR !== undefined ? ` (FORCE_COLOR=${e.FORCE_COLOR})` : !process.stdout.isTTY ? " (not a TTY)" : "";
+  const uni = unicodeSupported();
+  const emoji = emojiSupported();
+  const lines = [
+    ok(`${terminalName()}, ${process.stdout.columns ?? "?"} columns`),
+    (depth >= 8 ? ok : warn)(`colour ${DEPTH_NAME[depth]}${why}`),
+    (uni ? ok : warn)(`unicode ${uni ? "yes" : "no, ASCII glyphs"} · emoji ${emoji ? "yes" : "no, text markers"}`),
+    ok(`TERM=${e.TERM || "-"} TERM_PROGRAM=${e.TERM_PROGRAM || "-"} WT_SESSION=${e.WT_SESSION ? "set" : "-"}`),
+  ];
+  if (legacyConhost()) lines.push(warn("legacy console: use Windows Terminal for full colour and icons (winget install Microsoft.WindowsTerminal)"));
+  return lines;
+}
+
 export async function doctor(): Promise<void> {
-  console.log(a.neon(a.bold("◆ Environment")));
+  console.log(head("Environment"));
   const major = Number(process.versions.node.split(".")[0]);
   console.log(major >= 22 ? ok(`node ${process.versions.node}`) : bad(`node ${process.versions.node} — need 22+`));
   const py = process.platform === "win32" ? "python" : "python3";
@@ -41,7 +63,10 @@ export async function doctor(): Promise<void> {
   }
   console.log(ok(`config ${configPath()}`));
 
-  console.log(`\n${a.neon(a.bold("◆ Providers"))}`);
+  console.log(`\n${head("Terminal")}`);
+  for (const l of terminalReport()) console.log(l);
+
+  console.log(`\n${head("Providers")}`);
   const cfg = loadConfig();
   const ready = readyProviders(cfg);
   if (!ready.length) console.log(warn("no providers — atlas keys add openrouter"));

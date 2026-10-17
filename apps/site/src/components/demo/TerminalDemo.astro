@@ -1,0 +1,271 @@
+---
+/**
+ * Plays a real recording of the Atlas CLI (src/demos/<name>.json, made by
+ * packages/cli/scripts/capture-demos.tsx). ANSI is turned into HTML here at
+ * build time; the page only gets a deduplicated line table + frame timings.
+ */
+import RotateCcw from "@lucide/astro/icons/rotate-ccw";
+import { ansiToHtml, stripAnsi } from "./ansi";
+
+interface Props {
+  /** Recording name: logo, chat, connect, compare, agent, agents. */
+  name: string;
+  /** Window title. */
+  title?: string;
+  /** Play when scrolled into view (default). Off: last frame + replay button. */
+  autoplay?: boolean;
+}
+
+interface Recording {
+  cols: number;
+  rows: number;
+  frames: { t: number; ansi: string }[];
+}
+
+const { name, title = "atlas", autoplay = true } = Astro.props;
+
+const files = import.meta.glob<{ default: Recording }>("../../demos/*.json", { eager: true });
+const rec = files[`../../demos/${name}.json`]?.default;
+if (!rec?.frames.length) throw new Error(`TerminalDemo: no recording "${name}" in src/demos/`);
+
+// Line table: frames mostly differ by a line or two, so each frame is a list of indexes.
+const table: string[] = [];
+const seen = new Map<string, number>();
+const frames = rec.frames.map((f) => [
+  f.t,
+  ...f.ansi.split("\n").map((line) => {
+    const html = ansiToHtml(line);
+    let i = seen.get(html);
+    if (i === undefined) {
+      i = table.push(html) - 1;
+      seen.set(html, i);
+    }
+    return i;
+  }),
+]);
+const last = frames.at(-1)!;
+const lastHtml = last
+  .slice(1)
+  .map((i) => table[i])
+  .join("\n");
+const payload = JSON.stringify({ lines: table, frames }).replace(/</g, "\\u003c");
+
+const path = Astro.url.pathname.slice(import.meta.env.BASE_URL.replace(/\/$/, "").length);
+const lang = path.startsWith("/ru/") ? "ru" : path.startsWith("/en/") ? "en" : "uz";
+const T = {
+  uz: { replay: "Qayta ko'rsatish", label: "Atlas CLI yozuvi" },
+  ru: { replay: "Показать снова", label: "Запись Atlas CLI" },
+  en: { replay: "Replay", label: "Atlas CLI recording" },
+}[lang];
+const summary = stripAnsi(rec.frames.at(-1)!.ansi)
+  .split("\n")
+  .map((l) => l.trim())
+  .filter((l) => l && !/^[─╭╰│█╗╔║╚═\s]+$/.test(l))
+  .slice(0, 12)
+  .join(" · ");
+---
+
+<figure class="term" data-term-demo data-autoplay={autoplay ? "" : undefined} style={`--cols:${rec.cols};--rows:${rec.rows}`}>
+  <div class="bar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="title">{title}</span>
+    <button class="replay" type="button" aria-label={T.replay} title={T.replay}>
+      <RotateCcw size={15} stroke-width={2} aria-hidden="true" />
+    </button>
+  </div>
+  <div class="screen" role="img" aria-label={`${T.label}: ${summary}`}>
+    <pre aria-hidden="true"><code set:html={lastHtml} /></pre>
+  </div>
+  <script type="application/json" set:html={payload} />
+</figure>
+
+<script>
+  type Data = { lines: string[]; frames: number[][] };
+  const HOLD = 3200; // pause on the last frame before looping
+  const MAX_GAP = 2500;
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function setup(el: HTMLElement) {
+    const json = el.querySelector<HTMLScriptElement>('script[type="application/json"]');
+    const code = el.querySelector("code");
+    const btn = el.querySelector<HTMLButtonElement>(".replay");
+    if (!json || !code || !btn) return;
+    const { lines, frames } = JSON.parse(json.textContent ?? "{}") as Data;
+    const end = frames.length - 1;
+    let i = end;
+    let timer = 0;
+    let playing = false; // wants to play
+    let loop = el.hasAttribute("data-autoplay") && !reduce.matches;
+    let visible = false;
+
+    const draw = (k: number) => {
+      code.innerHTML = frames[k]!.slice(1)
+        .map((n) => lines[n])
+        .join("\n");
+    };
+    const stop = () => {
+      window.clearTimeout(timer);
+      timer = 0;
+    };
+    const tick = () => {
+      draw(i);
+      if (i >= end) {
+        if (!loop) {
+          playing = false;
+          return;
+        }
+        timer = window.setTimeout(() => {
+          i = 0;
+          tick();
+        }, HOLD);
+        return;
+      }
+      const gap = Math.min(MAX_GAP, frames[i + 1]![0]! - frames[i]![0]!);
+      timer = window.setTimeout(() => {
+        i += 1;
+        tick();
+      }, gap);
+    };
+    const start = (from: number) => {
+      stop();
+      i = from;
+      playing = true;
+      if (visible) tick();
+    };
+
+    btn.addEventListener("click", () => start(0));
+
+    new IntersectionObserver(
+      (entries) => {
+        visible = entries.some((e) => e.isIntersecting);
+        if (!visible) return stop();
+        if (playing && !timer) tick();
+        else if (!playing && loop && i === end && !el.dataset.started) {
+          el.dataset.started = "1";
+          start(0);
+        }
+      },
+      { threshold: 0.35 },
+    ).observe(el);
+
+    reduce.addEventListener("change", () => {
+      if (!reduce.matches) return;
+      // Motion turned off: settle on the final frame.
+      loop = false;
+      stop();
+      playing = false;
+      i = end;
+      draw(end);
+    });
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-term-demo]").forEach(setup);
+</script>
+
+<style>
+  .term {
+    /* The screen stays dark in both themes, like a real terminal profile. */
+    --term-bg: #070c16;
+    --term-fg: #e6f7ff;
+    margin: 0;
+    max-width: 100%;
+    border: 1px solid var(--atlas-line);
+    border-radius: var(--atlas-radius);
+    background: var(--term-bg);
+    overflow: hidden;
+    box-shadow: 0 24px 60px -30px rgb(0 229 255 / 0.25);
+  }
+  .bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 0.4rem 0.6rem 0.4rem 0.9rem;
+    background: var(--atlas-code-bar);
+    border-bottom: 1px solid var(--atlas-line);
+  }
+  .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .dots i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--atlas-faint);
+  }
+  .title {
+    font: 500 0.75rem var(--atlas-font-mono);
+    color: var(--atlas-dim);
+  }
+  .replay {
+    justify-self: end;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--atlas-dim);
+    cursor: pointer;
+  }
+  .replay:hover {
+    color: var(--atlas-neon);
+    background: color-mix(in srgb, var(--atlas-neon) 10%, transparent);
+  }
+  .screen {
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--term-bg);
+    scrollbar-color: var(--atlas-faint) transparent;
+  }
+  pre {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border: 0;
+    background: transparent;
+    color: var(--term-fg);
+    /* Box-drawing glyphs need a font that has them, or columns drift. */
+    font-family: var(--atlas-font-blocks);
+    font-size: clamp(10px, 1.15vw, 15px);
+    line-height: 1.25;
+    /* Fixed size from the recording: no layout shift between frames. */
+    height: calc(var(--rows) * 1.25em + 1.8rem);
+    width: max-content;
+    min-width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+  code {
+    display: block;
+    width: calc(var(--cols) * 1ch);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    white-space: pre;
+  }
+  /* Full-cell blocks (█): fill the whole line box, no seams. */
+  code :global(.blk) {
+    display: inline-block;
+    height: 1.25em;
+    vertical-align: top;
+  }
+  code :global(.b) {
+    font-weight: 700;
+  }
+  code :global(.d) {
+    opacity: 0.6;
+  }
+  code :global(.i) {
+    font-style: italic;
+  }
+  code :global(.u) {
+    text-decoration: underline;
+  }
+  code :global(.s) {
+    text-decoration: line-through;
+  }
+</style>

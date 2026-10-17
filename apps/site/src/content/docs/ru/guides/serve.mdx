@@ -1,0 +1,67 @@
+---
+title: "Локальный прокси"
+description: "atlas serve: OpenAI-совместимый endpoint на вашем компьютере с переключением бесплатных моделей."
+sidebar:
+  order: 10
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`atlas serve` запускает локальный OpenAI-совместимый API. Любой инструмент, который умеет работать с OpenAI, может использовать ваши подключённые ИИ и ту же цепочку переключения, что и чат.
+
+```bash
+atlas serve                  # http://127.0.0.1:4141/v1
+atlas serve --port 8080
+```
+
+При запуске печатаются URL и токен:
+
+```text
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=atlas-...
+```
+
+Токен создаётся при первом запуске и сохраняется как `serveToken` в `~/.the-atlas/config.json`. Сервер слушает только `127.0.0.1`. Новые ключи, добавленные во время работы, подхватываются без перезапуска.
+
+## Endpoints
+
+| Метод и путь | Авторизация | Что делает |
+|---|---|---|
+| `GET /health` | нет | `{"status":"ok"}` |
+| `GET /v1/models` | токен | `auto` и `provider/model` для каждого подключённого ИИ |
+| `POST /v1/chat/completions` | токен | Chat completion, потоком или нет |
+
+Передавайте токен как `Authorization: Bearer <token>`. `/models` и `/chat/completions` работают и без префикса `/v1`.
+
+## Выбор модели
+
+| Значение `model` | Маршрут |
+|---|---|
+| `auto`, `atlas` или пусто | Ваш провайдер по умолчанию (auto-переключение, если вы не задали провайдера через `atlas use`) |
+| `groq/llama-3.3-70b-versatile` | Этот провайдер и модель, без переключения |
+| `openrouter/openrouter/free` | Бесплатный роутер OpenRouter |
+| что-то другое | Auto-переключение с моделью по умолчанию у каждого провайдера |
+
+Заголовки ответа `X-Atlas-Provider` и `X-Atlas-Model` говорят, кто ответил. Если провайдер падает до ответа (лимит, сбой, неверный ключ), пробуется следующий.
+
+## Пример
+
+```bash
+curl http://127.0.0.1:4141/v1/chat/completions \
+  -H "Authorization: Bearer $ATLAS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
+```
+
+Большинство агентов читают эти переменные:
+
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+export OPENAI_API_KEY=atlas-...
+```
+
+`atlas run <agent> --free` и `Tab` в окне выбора агентов запускают прокси в фоне и задают переменные за вас. См. [Запуск ИИ-агентов](/ru/guides/agents/).
+
+<Aside type="caution">
+Любой, у кого есть токен, может пользоваться вашими подключёнными ключами через прокси. Не раскрывайте токен. Чтобы сменить его, удалите `serveToken` из `config.json` и перезапустите `atlas serve`.
+</Aside>

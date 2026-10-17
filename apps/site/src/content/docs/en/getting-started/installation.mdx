@@ -1,0 +1,155 @@
+---
+title: "Installation"
+description: "Install The Atlas CLI on Windows, macOS or Linux with npm."
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Aside, Steps } from '@astrojs/starlight/components';
+
+The Atlas is an npm package. It needs **Node.js 22 or newer**.
+
+## Install
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+<Steps>
+
+1. Install Node.js 22+ (skip if `node --version` already prints 22 or higher):
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+
+   Or download the installer from [nodejs.org](https://nodejs.org/en/download). Open a new terminal afterwards.
+
+2. Install The Atlas:
+
+   ```powershell
+   npm i -g the-atlas
+   ```
+
+3. Start it:
+
+   ```powershell
+   atlas
+   ```
+
+</Steps>
+
+<Aside type="tip">
+Use [Windows Terminal](https://aka.ms/terminal) for full colour and icons. The old console (cmd or Windows PowerShell 5.1 in its own window) works, with plain ASCII glyphs. See [Terminals](/en/getting-started/terminals/).
+</Aside>
+
+</TabItem>
+<TabItem label="macOS">
+
+<Steps>
+
+1. Install Node.js 22+ (skip if `node --version` already prints 22 or higher):
+
+   ```bash
+   brew install node
+   ```
+
+   Or download the installer from [nodejs.org](https://nodejs.org/en/download).
+
+2. Install The Atlas:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+3. Start it:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+<TabItem label="Linux">
+
+<Steps>
+
+1. Install Node.js 22+ (skip if `node --version` already prints 22 or higher). Distribution packages are often older; use [nodejs.org](https://nodejs.org/en/download) or a version manager such as nvm:
+
+   ```bash
+   nvm install 22
+   ```
+
+2. Install The Atlas:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+   If npm fails with `EACCES`, your global npm folder belongs to root. Use nvm, or set a user prefix (`npm config set prefix ~/.local`) instead of `sudo`.
+
+3. Start it:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+## Check the install
+
+```bash
+atlas --version
+atlas doctor
+```
+
+`atlas doctor` checks Node, npm, git, bash and Python, shows what it detected about your terminal, and pings every connected provider.
+
+## Update
+
+```bash
+npm i -g the-atlas@latest
+```
+
+Your keys, chats and settings live in `~/.the-atlas/` and survive updates.
+
+## Uninstall
+
+```bash
+npm uninstall -g the-atlas
+```
+
+This keeps your data. To remove keys, chat history and settings too, delete the data folder:
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.the-atlas"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+<TabItem label="Linux">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+</Tabs>
+
+If you set `ATLAS_HOME`, delete that folder instead. If you installed the Claude Code status line, remove the `statusLine` entry from `~/.claude/settings.json`.
+
+## Next
+
+[Quickstart](/en/getting-started/quickstart/): connect a free AI and ask your first question.

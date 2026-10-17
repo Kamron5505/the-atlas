@@ -1,0 +1,87 @@
+---
+title: "Chat basics"
+description: "Slash commands, input history, stopping answers, attaching files and images, saved chats."
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Start the chat with `atlas` (same as `atlas chat`). The header shows which AIs are connected and which model is selected.
+
+```bash
+atlas                          # new chat
+atlas -c                       # continue the last chat in this folder
+atlas chat -p groq             # use one provider
+atlas chat -p openrouter -m openrouter/free
+```
+
+## Slash commands
+
+Type `/` to open the command menu. Keep typing to filter, `↑` `↓` to move, `Tab` to complete, `Enter` to run.
+
+The most used ones:
+
+| Command | What it does |
+|---|---|
+| `/connect` | Connect an AI |
+| `/model` | Pick a model; `/model groq/llama-3.3-70b-versatile` sets one directly |
+| `/provider auto` | Back to automatic fallback between connected AIs |
+| `/clear` | Start a new conversation |
+| `/help` | All commands and keys |
+
+Full list: [Slash commands](/en/reference/slash-commands/).
+
+## Keys while chatting
+
+| Key | Action |
+|---|---|
+| `Enter` | Send |
+| `↑` `↓` | Previous and next sent messages (when no menu is open) |
+| `Esc` | Stop the answer while it streams; otherwise clear the input |
+| `Tab` | Complete a `/command` or `@path` |
+| `ctrl+r` | [Voice input](/en/guides/voice/) |
+| `ctrl+c` | Quit |
+
+When you stop an answer, the part already received stays in the chat, marked "stopped".
+
+## Attach files and images with @
+
+Put `@path` anywhere in your message. While you type `@`, the menu suggests files and folders; `Tab` completes.
+
+```text
+› @src/app.ts @package.json why does the build fail?
+› @"docs/my notes.md" summarize
+› @screenshot.png what is wrong in this UI?
+› @src/ what is in this folder?
+```
+
+| You attach | What the AI receives | Limit |
+|---|---|---|
+| Text file | The file content | 256 KB |
+| Image (`.png` `.jpg` `.jpeg` `.webp` `.gif`) | The image | 5 MB |
+| Folder | A listing of its entries (up to 200; skips `node_modules`, `.git`, `dist` and similar) | |
+
+Paths are relative to the folder where you started `atlas`. Quote paths with spaces. Binary files, missing files and files over the limit are not attached; the chat says why.
+
+<Aside>
+Images need a model that accepts images. If the selected model does not, pick another with `/model`.
+</Aside>
+
+## Saved chats
+
+Every chat with at least one message is saved automatically to `~/.the-atlas/sessions/`.
+
+| Command | What it does |
+|---|---|
+| `/history` | Pick any saved chat and continue it |
+| `/resume` | Continue the last chat started in this folder |
+| `/export` | Save this chat as Markdown in the current folder (`atlas-chat-<id>.md`) |
+| `/export notes.md` | Save it under a name you choose |
+| `/clear` | Start a fresh chat (the old one stays in history) |
+
+From the shell, `atlas -c` opens the last chat of the current folder.
+
+## Status line
+
+The line under the input shows: repository, git branch, how full the context window is, estimated cost, uncommitted `+added -removed` lines, and the model that answered with its remaining free requests. See [Status line](/en/guides/status-line/).

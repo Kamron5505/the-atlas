@@ -1,0 +1,64 @@
+---
+title: "Каталог агентов"
+description: "Все 47 AI CLI агентов, которых atlas agents умеет устанавливать и запускать."
+sidebar:
+  order: 2
+---
+
+{/* Generated from packages/cli/agents.conf (Russian version of apps/site/scripts/gen-agents.mjs output). Do not edit by hand. */}
+
+47 агентов. Откройте окно выбора через `atlas agents` (или `/agents` в чате) или запустите агента сразу через `atlas run <name>`. См. [Запуск ИИ-агентов](/ru/guides/agents/).
+
+Колонка **Windows**: **Да** = ставится нативно (npm, pip, winget или PowerShell). **Нужен Git Bash или WSL** = установщик это bash-скрипт. **Только WSL** = нет нативной сборки для Windows. **Вручную** = установите сами по ссылке.
+
+| Агент | Команда | Категория | Вход | Windows |
+|---|---|---|---|---|
+| [Claude Code](https://console.anthropic.com/settings/keys) | `claude` | Код | **Подписка**: ANTHROPIC_API_KEY или Claude Pro/Max | Да |
+| [OpenAI Codex](https://platform.openai.com/api-keys) | `codex` | Код | **Вход через браузер**: вход ChatGPT или OPENAI_API_KEY | Да |
+| [Gemini CLI](https://aistudio.google.com/apikey) | `gemini` | Код | **Бесплатный тариф**: вход Google или GEMINI_API_KEY | Да |
+| [GitHub Copilot](https://github.com/features/copilot) | `copilot` | Код | **Подписка**: GitHub + подписка Copilot | Да |
+| [OpenCode](https://opencode.ai/docs) | `opencode` | Код | **API-ключ**: API-ключ провайдера (и локальные модели) | Да |
+| [Crush](https://github.com/charmbracelet/crush) | `crush` | Код | **API-ключ**: API-ключ провайдера | Да |
+| [Qwen Code](https://github.com/QwenLM/qwen-code) | `qwen` | Код | **Бесплатный тариф**: вход Qwen или API-ключ | Да |
+| [Continue](https://hub.continue.dev) | `cn` | Код | **Бесплатный тариф**: вход Continue или API-ключ | Да |
+| [Cursor Agent](https://docs.cursor.com/en/cli/overview) | `cursor-agent` | Код | **Вход через браузер**: вход в аккаунт Cursor | Да |
+| [Plandex](https://docs.plandex.ai) | `plandex` | Код | **Вход через браузер**: вход Plandex или API-ключ | Только WSL |
+| [Freebuff](https://freebuff.com/) | `freebuff` | Код | **Бесплатный тариф**: вход или ключ через freebuff.com | Да |
+| [Codebuff](https://www.codebuff.com/) | `codebuff` | Код | **Бесплатный тариф**: бесплатный кредит, затем API-ключ или подписка | Да |
+| [Amp](https://ampcode.com/manual) | `amp` | Код | **Вход через браузер**: вход Amp или API-ключ | Да |
+| [Droid](https://docs.factory.ai/cli/getting-started/quickstart) | `droid` | Код | **Вход через браузер**: вход в аккаунт Factory | Да |
+| [Auggie](https://docs.augmentcode.com/cli/overview) | `auggie` | Код | **Подписка**: вход Augment · подписка | Да |
+| [Jules](https://jules.google) | `jules` | Код | **Бесплатный тариф**: вход Google | Да |
+| [Forge](https://forgecode.dev/docs) | `forge` | Код | **API-ключ**: API-ключ провайдера (OpenRouter и др.) | Да |
+| [iFlow CLI](https://platform.iflow.cn) | `iflow` | Код | **Бесплатный тариф**: вход iFlow | Да |
+| [Qodo Command](https://docs.qodo.ai) | `qodo` | Код | **Бесплатный тариф**: бесплатный тариф или API-ключ | Да |
+| [CodeBuddy](https://www.codebuddy.ai) | `codebuddy` | Код | **Вход через браузер**: вход CodeBuddy или API-ключ | Да |
+| [Kimi CLI](https://platform.moonshot.ai) | `kimi` | Код | **Вход через браузер**: MOONSHOT_API_KEY или вход Kimi | Да |
+| [Nanocoder](https://github.com/Nano-Collective/nanocoder) | `nanocoder` | Код | **Бесплатный тариф**: бесплатно (открытый код), локальная модель или ключ | Да |
+| [Micro Agent](https://github.com/BuilderIO/micro-agent) | `micro-agent` | Код | **API-ключ**: OPENAI_API_KEY или другой провайдер | Да |
+| [Amazon Q](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line-installing.html) | `q chat` | Код | **Бесплатный тариф**: AWS Builder ID | Только WSL |
+| [Cody](https://sourcegraph.com/docs/cody) | `cody` | Код | **Вход через браузер**: вход Sourcegraph или SRC_ACCESS_TOKEN | Да |
+| [Aider](https://aider.chat/docs/llms.html) | `aider` | Парное программирование | **API-ключ**: API-ключ провайдера (OpenAI/Anthropic/OpenRouter) | Да |
+| [Goose](https://block.github.io/goose/docs/quickstart) | `goose session` | Агент | **API-ключ**: API-ключ провайдера | Да |
+| [Ollama](https://ollama.com/download) | `ollama run llama3.2` | Локально | **Бесплатный тариф**: локально, вход не нужен | Да |
+| [llm](https://llm.datasette.io/en/stable/setup.html) | `llm` | Чат | **API-ключ**: API-ключ провайдера | Да |
+| [AIChat](https://github.com/sigoden/aichat/wiki/Configuration-Guide) | `aichat` | Чат | **API-ключ**: API-ключ провайдера | Да |
+| [Shell GPT](https://github.com/TheR1D/shell_gpt) | `sgpt` | Чат | **API-ключ**: API-ключ провайдера (OpenAI или локальная модель) | Да |
+| [Mods](https://github.com/charmbracelet/mods) | `mods` | Чат | **API-ключ**: API-ключ провайдера | Да |
+| [AI Shell](https://github.com/BuilderIO/ai-shell) | `ai-shell` | Чат | **API-ключ**: OPENAI_API_KEY | Да |
+| [Fabric](https://github.com/danielmiessler/fabric) | `fabric` | Чат | **Бесплатный тариф**: бесплатно (открытый код), ключ провайдера | Да |
+| [Gorilla CLI](https://github.com/gorilla-llm/gorilla-cli) | `gorilla` | Чат | **Бесплатный тариф**: API-ключ не нужен | Да |
+| [Open Interpreter](https://docs.openinterpreter.com) | `interpreter` | Агент | **Бесплатный тариф**: бесплатно (открытый код), ключ или локальная модель | Да |
+| [OpenHands](https://docs.openhands.dev) | `openhands` | Агент | **Бесплатный тариф**: бесплатно (открытый код), ключ LLM | Да |
+| [SWE-agent](https://swe-agent.com) | `sweagent` | Агент | **Бесплатный тариф**: бесплатно (открытый код), API-ключ | Да |
+| [gptme](https://gptme.org) | `gptme` | Агент | **Бесплатный тариф**: бесплатно (открытый код), ключ или локальная модель | Да |
+| [gpt-engineer](https://gpt-engineer.readthedocs.io) | `gpte` | Агент | **Бесплатный тариф**: бесплатно (открытый код), OPENAI_API_KEY | Да |
+| [Cline CLI](https://cline.bot/cli) | `cline` | Код | **Бесплатный тариф**: бесплатно (с аккаунтом) или API-ключ | Да |
+| [Kilo CLI](https://kilo.ai/cli) | `kilo` | Код | **Бесплатный тариф**: бесплатно (MiniMax M2.5) или API-ключ | Да |
+| [Grok Build](https://x.ai/cli) | `grok` | Код | **Подписка**: SuperGrok/X Premium · вход через браузер | Да |
+| [Antigravity](https://antigravity.google) | `antigravity` | Код | **Бесплатный тариф**: бесплатно (preview), вход Google | Да |
+| [GitHub CLI](https://cli.github.com) | `gh` | Инструменты | **Бесплатный тариф**: вход GitHub (gh auth login) | Да |
+| [CodeRabbit](https://www.coderabbit.ai/cli) | `coderabbit` | Инструменты | **Бесплатный тариф**: вход CodeRabbit | Да |
+| [aicommits](https://github.com/Nutlope/aicommits) | `aicommits` | Инструменты | **API-ключ**: OPENAI_API_KEY | Да |
+
+Каталог основан на [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI) (MIT).

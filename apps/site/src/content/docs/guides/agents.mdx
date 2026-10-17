@@ -1,0 +1,88 @@
+---
+title: "AI agentlar ishga tushirgichi"
+description: "47 ta AI kod CLI'ni toping, o'rnating va oching; xohlasangiz Atlas bepul modellarida ishlating."
+sidebar:
+  order: 8
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Atlas'da 47 ta AI buyruq qatori agentlari katalogi bor: Claude Code, Codex, Gemini CLI, Aider, OpenCode, Goose va boshqalar. To'liq ro'yxat: [Agentlar katalogi](/extensions/agents/).
+
+## Tanlash oynasi
+
+```bash
+atlas agents               # interactive picker
+atlas agents --free        # only agents with a free tier
+atlas agents --installed   # only installed agents
+atlas agents --list        # print the catalog and exit
+```
+
+Chatda `/agents` dan foydalaning.
+
+| Tugma | Amal |
+|---|---|
+| Yozish | Nom, buyruq, kategoriya yoki tavsif bo'yicha filtrlash |
+| `↑` `↓`, `PgUp` `PgDn` | Harakatlanish |
+| `Tab` | "Atlas bepul modellarida ishlatish" ni yoqish/o'chirish |
+| `Enter` | Agentni ochish |
+| `Esc` | Yopish |
+
+Birinchi bo'lib oxirgi ochgan agentingiz, keyin o'rnatilgan agentlar, keyin eng ko'p ishlatganlaringiz turadi.
+
+## Yangi oynalar
+
+`Enter` agentni **yangi terminal oynasida** ochadi, shuning uchun Atlas chatingiz joyida qoladi:
+
+- **Windows**: o'rnatilgan bo'lsa Windows Terminal, aks holda yangi PowerShell oynasi.
+- **macOS**: Terminal.app.
+- **Linux**: `x-terminal-emulator`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `alacritty`, `xterm` dan birinchi topilgani.
+
+Agar agent o'rnatilmagan bo'lsa, The Atlas o'rnatish buyrug'ini ko'rsatadi va avval so'raydi. Masofaviy skriptni yuklab ishga tushiradigan o'rnatuvchilar belgilanadi. O'rnatish yangi oynada bajariladi.
+
+## Atlas bepul modellarida ishlatish
+
+Tanlash oynasida `Tab` ni bosing yoki `--free` bering. The Atlas fonda 4141-portda [lokal proksi](/guides/serve/) ni ishga tushiradi va agentni quyidagilar bilan ochadi:
+
+```bash
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_BASE=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=<your atlas serve token>
+```
+
+Aider, Open Interpreter va Shell GPT shu tarzda hech qanday sozlashsiz ishlaydi. Boshqa OpenAI'ga mos agentlar ham bu o'zgaruvchilardan foydalanadi; agent model so'rasa, `auto` ni tanlang.
+
+## Terminaldan
+
+```bash
+atlas run aider                    # launch here; installs if missing
+atlas run aider --free             # on Atlas free models
+atlas run codex --window           # in a new terminal window
+atlas run aider -y                 # install without asking
+atlas run aider -- --help          # pass arguments to the agent
+atlas install gemini               # install only
+```
+
+`atlas run` agent nomini yoki buyrug'ini qabul qiladi. Agentni birinchi marta ishga tushirganingizda The Atlas unga qanday kirilishini ko'rsatadi (brauzer orqali kirish, API kalit, obuna).
+
+## Windows bo'yicha eslatmalar
+
+- O'rnatish buyruqlari PowerShell'da bajariladi. winget yoki PowerShell o'rnatuvchisi bor agentlar o'shandan foydalanadi.
+- O'rnatuvchisi bash skript bo'lgan agentlarga Git Bash ([Git for Windows](https://git-scm.com/downloads)) yoki WSL kerak.
+- Ba'zi agentlarning Windows versiyasi yo'q; katalogda ular **Faqat WSL** deb belgilangan.
+- Agar agent o'rnatilsa-yu topilmasa, PATH yangilanishi uchun yangi terminal oching, keyin `atlas doctor` ni ishga tushiring.
+
+## O'z agentlaringizni qo'shish
+
+`~/.the-atlas/agents.conf` faylini yarating, har qatorda bitta agent, ichki katalog bilan bir xil formatda:
+
+```text
+# NAME|BINARY|COMMAND|INSTALL|DESCRIPTION|CATEGORY|AUTH|URL|WIN_INSTALL
+My Agent|myagent|myagent|npm install -g my-agent@latest|My own agent|Coding|API key|https://example.com|-
+```
+
+`BINARY` muqobillarni sanashi mumkin (`a,b`). `WIN_INSTALL` Windows uchun PowerShell yoki winget buyrug'i; `-` faqat WSL degani. Agentlaringiz ro'yxatga qo'shiladi; ichki katalogdagi agent bilan bir xil nomli agent e'tiborga olinmaydi.
+
+<Aside type="caution">
+O'rnatishda maxsus agentlar The Atlas tomonidan tekshirilmagan deb belgilanadi. Tasdiqlashdan oldin o'rnatish buyrug'ini tekshiring.
+</Aside>

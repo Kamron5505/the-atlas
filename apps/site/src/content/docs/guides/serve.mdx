@@ -1,0 +1,67 @@
+---
+title: "Lokal proksi"
+description: "atlas serve: kompyuteringizda bepul modellarga almashadigan, OpenAI'ga mos endpoint."
+sidebar:
+  order: 10
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`atlas serve` lokal, OpenAI'ga mos API'ni ishga tushiradi. OpenAI bilan ishlay oladigan har qanday vosita ulangan AI'laringiz va chatdagi kabi almashish zanjiridan foydalana oladi.
+
+```bash
+atlas serve                  # http://127.0.0.1:4141/v1
+atlas serve --port 8080
+```
+
+Ishga tushganda URL va tokenni chiqaradi:
+
+```text
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=atlas-...
+```
+
+Token birinchi ishga tushirishda yaratiladi va `~/.the-atlas/config.json` da `serveToken` sifatida saqlanadi. Server faqat `127.0.0.1` da tinglaydi. Ishlab turganda qo'shgan yangi kalitlaringiz qayta ishga tushirmasdan qabul qilinadi.
+
+## Endpoint'lar
+
+| Metod va yo'l | Avtorizatsiya | Nima qiladi |
+|---|---|---|
+| `GET /health` | yo'q | `{"status":"ok"}` |
+| `GET /v1/models` | token | `auto` va har bir ulangan AI uchun `provider/model` |
+| `POST /v1/chat/completions` | token | Chat javobi, oqimli yoki oqimsiz |
+
+Tokenni `Authorization: Bearer <token>` ko'rinishida yuboring. `/models` va `/chat/completions` `/v1` prefiksisiz ham ishlaydi.
+
+## Model tanlash
+
+| `model` qiymati | Yo'nalish |
+|---|---|
+| `auto`, `atlas` yoki bo'sh | Standart provayderingiz (`atlas use` bilan belgilamagan bo'lsangiz, auto almashish) |
+| `groq/llama-3.3-70b-versatile` | Shu provayder va model, almashishsiz |
+| `openrouter/openrouter/free` | OpenRouter'ning bepul routeri |
+| boshqa har qanday qiymat | Har bir provayderning standart modeli bilan auto almashish |
+
+`X-Atlas-Provider` va `X-Atlas-Model` javob sarlavhalari kim javob berganini aytadi. Agar provayder javob berishdan oldin xato qilsa (rate limit, uzilish, noto'g'ri kalit), keyingisi sinab ko'riladi.
+
+## Misol
+
+```bash
+curl http://127.0.0.1:4141/v1/chat/completions \
+  -H "Authorization: Bearer $ATLAS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
+```
+
+Ko'pchilik agentlar quyidagi o'zgaruvchilarni o'qiydi:
+
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+export OPENAI_API_KEY=atlas-...
+```
+
+`atlas run <agent> --free` va agentlar oynasidagi `Tab` proksini fonda ishga tushiradi va o'zgaruvchilarni siz uchun o'rnatadi. Batafsil: [AI agentlar ishga tushirgichi](/guides/agents/).
+
+<Aside type="caution">
+Tokenga ega har kim proksi orqali ulangan kalitlaringizdan foydalana oladi. Tokenni sir saqlang. Uni yangilash uchun `config.json` dan `serveToken` ni o'chiring va `atlas serve` ni qayta ishga tushiring.
+</Aside>

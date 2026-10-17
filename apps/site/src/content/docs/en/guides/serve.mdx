@@ -1,0 +1,67 @@
+---
+title: "Local proxy"
+description: "atlas serve: an OpenAI-compatible endpoint on your machine with free-model fallback."
+sidebar:
+  order: 10
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+`atlas serve` runs a local, OpenAI-compatible API. Any tool that can talk to OpenAI can use your connected AIs and the same fallback chain as the chat.
+
+```bash
+atlas serve                  # http://127.0.0.1:4141/v1
+atlas serve --port 8080
+```
+
+On start it prints the URL and the token:
+
+```text
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=atlas-...
+```
+
+The token is generated on the first run and saved as `serveToken` in `~/.the-atlas/config.json`. The server listens on `127.0.0.1` only. New keys you add while it runs are picked up without a restart.
+
+## Endpoints
+
+| Method and path | Auth | What it does |
+|---|---|---|
+| `GET /health` | no | `{"status":"ok"}` |
+| `GET /v1/models` | token | `auto` plus `provider/model` for each connected AI |
+| `POST /v1/chat/completions` | token | Chat completion, streaming or not |
+
+Send the token as `Authorization: Bearer <token>`. `/models` and `/chat/completions` also work without the `/v1` prefix.
+
+## Choosing the model
+
+| `model` value | Route |
+|---|---|
+| `auto`, `atlas` or empty | Your default provider (auto fallback unless you set one with `atlas use`) |
+| `groq/llama-3.3-70b-versatile` | That provider and model, no fallback |
+| `openrouter/openrouter/free` | OpenRouter's free router |
+| anything else | Auto fallback with each provider's default model |
+
+The response headers `X-Atlas-Provider` and `X-Atlas-Model` say who answered. If a provider fails before answering (rate limit, outage, bad key), the next one is tried.
+
+## Example
+
+```bash
+curl http://127.0.0.1:4141/v1/chat/completions \
+  -H "Authorization: Bearer $ATLAS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"hi"}]}'
+```
+
+Most agents read these variables:
+
+```bash
+export OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+export OPENAI_API_KEY=atlas-...
+```
+
+`atlas run <agent> --free` and `Tab` in the agents picker start the proxy in the background and set the variables for you. See [AI agents launcher](/en/guides/agents/).
+
+<Aside type="caution">
+Anyone with the token can use your connected keys through the proxy. Keep the token private. To rotate it, delete `serveToken` from `config.json` and restart `atlas serve`.
+</Aside>

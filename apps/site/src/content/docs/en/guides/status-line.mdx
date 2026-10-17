@@ -1,0 +1,65 @@
+---
+title: "Status line"
+description: "The Atlas status line in chat, and how to install it into Claude Code."
+sidebar:
+  order: 9
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+One line with what matters while you work:
+
+```text
+the-atlas | 🌿 (main) | 🟢 ████░░░░░░░░░░░░░░░░ 12% | $0.00 | +10 -2 | 🤖 groq/llama-3.3-70b-versatile 980/1000
+```
+
+| Part | Meaning |
+|---|---|
+| `the-atlas` | Repository (or folder) name |
+| `(main)` | Current git branch |
+| Bar and `12%` | How full the model's context window is; green to red |
+| `$0.00` | Estimated cost of the session (free models cost 0) |
+| `+10 -2` | Uncommitted lines added and removed (`git diff HEAD`) |
+| Model | The model that answered last, with its remaining free requests |
+
+Where emoji cannot be drawn, text markers are used instead: `br:`, `OK` / `MID` / `HOT` / `MAX`, `ai:`, and `#` `.` for the bar.
+
+## In the Atlas chat
+
+The status line is always on, under the input box. It is replaced by the menu while you type `/` or `@`.
+
+## In Claude Code
+
+Claude Code can show the same line at the bottom of its screen:
+
+```bash
+atlas statusline --install claude
+```
+
+The Atlas shows the change, asks for confirmation (`-y` skips it), backs up your settings file, and sets:
+
+```json
+{
+  "statusLine": { "type": "command", "command": "atlas statusline", "padding": 0 }
+}
+```
+
+in `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`). Restart Claude Code to see it. If you already had a status line, The Atlas shows it before replacing it; the backup file keeps it.
+
+In Claude Code the line shows Claude's model, session cost, lines changed and context usage, all taken from the JSON Claude Code sends.
+
+<Aside>
+Only Claude Code exposes a status line API, so `claude` is the only value `--install` accepts.
+</Aside>
+
+## Remove it
+
+Delete the `statusLine` entry from `~/.claude/settings.json`, or restore the backup (`settings.json.atlas-backup-<date>`) next to it.
+
+## Test it by hand
+
+`atlas statusline` reads Claude Code's JSON on stdin and prints one line:
+
+```bash
+echo '{"model":{"display_name":"Opus"},"cost":{"total_cost_usd":0.42}}' | atlas statusline
+```

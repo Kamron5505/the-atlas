@@ -1,0 +1,89 @@
+---
+title: "MCP servers"
+description: "Give agent mode external tools through Model Context Protocol servers."
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+MCP (Model Context Protocol) servers add tools to [agent mode](/en/guides/agent-mode/): a browser, GitHub, databases, Google Drive and more. The Atlas connects to your servers when agent mode starts and offers their tools to the AI.
+
+## Presets
+
+```bash
+atlas mcp add filesystem
+atlas mcp add github
+```
+
+| Preset | Server | Asks for |
+|---|---|---|
+| `filesystem` | `@modelcontextprotocol/server-filesystem`, limited to the current folder | |
+| `github` | GitHub remote server (`api.githubcopilot.com/mcp/`) | GitHub token |
+| `browser` | `@playwright/mcp` (Playwright) | |
+| `memory` | `@modelcontextprotocol/server-memory` | |
+| `sequential-thinking` | `@modelcontextprotocol/server-sequential-thinking` | |
+| `sqlite` | `mcp-server-sqlite-npx` | Database file path |
+| `postgres` | `@henkey/postgres-mcp-server` | Connection string |
+| `gdrive` | `@piotr-agier/google-drive-mcp` | Run its `auth` command once (printed after adding) |
+
+Local presets run through `npx -y`, so Node.js must be on PATH. Secrets are typed hidden.
+
+## Add your own server
+
+```bash
+# Local server: everything after -- is the command
+atlas mcp add mydb -- npx -y some-mcp-server --flag
+atlas mcp add mydb -e API_KEY=abc -e REGION=eu -- node server.js
+atlas mcp add mydb --cwd ./tools -- python server.py
+
+# Remote server (Streamable HTTP, with SSE fallback)
+atlas mcp add docs --url https://example.com/mcp
+atlas mcp add api --url https://example.com/mcp -H "Authorization=Bearer abc"
+```
+
+Headers and env pairs are `KEY=VALUE`; headers also accept `Key: Value`. Server names use lowercase letters, digits, `_` and `-` (up to 32 characters).
+
+## Manage servers
+
+```bash
+atlas mcp list              # servers, status and tool count
+atlas mcp tools github      # connect and list a server's tools
+atlas mcp disable github    # keep it, but do not start it
+atlas mcp enable github
+atlas mcp remove github     # or: atlas mcp rm github
+```
+
+In the chat, `/mcp` shows each server's status and tools.
+
+Tool names are shown as `mcp__<server>__<tool>`. Values of env variables and headers are never printed; tokens in URLs and arguments are masked.
+
+## Import from Claude Desktop
+
+```bash
+atlas mcp import claude
+```
+
+Reads Claude Desktop's `claude_desktop_config.json`, shows the servers it found, and asks before adding them. Names that already exist are skipped. The Claude Desktop file is never changed.
+
+## Approval
+
+<Aside type="caution">
+**Every MCP tool call asks for your approval**, because The Atlas cannot know what an external tool does. Approve with Yes, or allow that tool for the rest of the agent run.
+</Aside>
+
+## Config file
+
+Servers are stored in `~/.the-atlas/mcp.json`, in the same `mcpServers` format as Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"] },
+    "docs": { "url": "https://example.com/mcp", "headers": { "Authorization": "Bearer ..." } },
+    "old": { "command": "node", "args": ["server.js"], "disabled": true }
+  }
+}
+```
+
+Local servers start in the project folder unless they set `cwd`. Connecting times out after 15 seconds and a tool call after 2 minutes. A broken `mcp.json` is reported but does not stop the chat.

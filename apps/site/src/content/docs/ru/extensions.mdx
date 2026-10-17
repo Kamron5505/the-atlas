@@ -1,0 +1,44 @@
+---
+title: "Расширения"
+description: "Расширьте The Atlas MCP-серверами и 47 внешними ИИ-агентами."
+sidebar:
+  order: 1
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The Atlas расширяется двумя способами: **MCP-серверы** дают режиму агента новые инструменты, а **каталог агентов** запускает другие ИИ-инструменты командной строки.
+
+<CardGrid>
+  <LinkCard title="MCP-серверы" description="Браузер, GitHub, базы данных, Google Drive и любой MCP-сервер как инструменты для режима агента." href="/ru/guides/mcp/" />
+  <LinkCard title="Каталог агентов" description="47 AI CLI агентов с командами установки, типом входа и поддержкой Windows." href="/ru/extensions/agents/" />
+</CardGrid>
+
+## Пресеты MCP
+
+Добавьте через `atlas mcp add <preset>`:
+
+| Пресет | Что получает агент |
+|---|---|
+| `filesystem` | Доступ к файлам, только в текущей папке |
+| `github` | Репозитории, issues и pull requests GitHub (нужен токен) |
+| `browser` | Браузер под управлением Playwright |
+| `memory` | Постоянный граф знаний |
+| `sequential-thinking` | Инструмент пошаговых рассуждений |
+| `sqlite` | Файл базы данных SQLite |
+| `postgres` | База данных PostgreSQL |
+| `gdrive` | Google Drive |
+
+Любой другой сервер: `atlas mcp add <name> -- <command>` или `atlas mcp add <name> --url <url>`. Серверы, которые вы уже используете в Claude Desktop: `atlas mcp import claude`.
+
+Каждый вызов инструмента MCP требует вашего одобрения.
+
+## Каталог агентов
+
+`atlas agents` открывает список из 47 агентов с поиском, среди них Claude Code, OpenAI Codex, Gemini CLI, GitHub Copilot, Aider, OpenCode, Goose и Ollama. Выберите агента, и The Atlas при необходимости установит его и откроет в новом окне. С `Tab` (или `atlas run <agent> --free`) агент работает на ваших бесплатных моделях Atlas.
+
+- [Полная таблица агентов](/ru/extensions/agents/)
+- [Как работает запуск агентов](/ru/guides/agents/)
+- [Добавить своих агентов](/ru/guides/agents/#добавить-своих-агентов)
+
+Каталог агентов взят из [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI) (MIT).

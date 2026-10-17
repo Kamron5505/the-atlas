@@ -1,0 +1,64 @@
+---
+/**
+ * ATLAS in the CLI's ANSI-Shadow letters (packages/cli/src/ui/intro.ts), as real text.
+ * Letters are "typed" in one by one, like `atlas` does on start.
+ */
+const A = [" █████╗ ", "██╔══██╗", "███████║", "██╔══██║", "██║  ██║", "╚═╝  ╚═╝"];
+const T = ["████████╗", "╚══██╔══╝", "   ██║   ", "   ██║   ", "   ██║   ", "   ╚═╝   "];
+const L = ["██╗     ", "██║     ", "██║     ", "██║     ", "███████╗", "╚══════╝"];
+const S = ["███████╗", "██╔════╝", "███████╗", "╚════██║", "███████║", "╚══════╝"];
+const letters = [A, T, L, A, S];
+const total = letters.reduce((w, l) => w + l[0]!.length, 0);
+let offset = 0;
+const parts = letters.map((rows) => {
+  const part = { text: rows.join("\n"), offset, width: rows[0]!.length };
+  offset += part.width;
+  return part;
+});
+---
+
+<div class="wordmark" role="img" aria-label="ATLAS" style={`--total:${total}ch`}>
+  {
+    parts.map((p, i) => (
+      <pre aria-hidden="true" style={`--x:${p.offset}ch;--w:${p.width}ch;--i:${i}`}>{p.text}</pre>
+    ))
+  }
+</div>
+
+<style>
+  .wordmark {
+    display: flex;
+    font-family: var(--atlas-font-blocks);
+    font-size: clamp(6.5px, 2.9vw, 20px);
+    line-height: 1;
+    width: fit-content;
+    max-width: 100%;
+  }
+  pre {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    width: var(--w);
+    overflow: visible;
+    background: var(--atlas-gradient);
+    background-size: var(--total) 100%;
+    background-position: calc(-1 * var(--x)) 0;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    pre {
+      animation: type-in 0.28s steps(4, end) both;
+      animation-delay: calc(var(--i) * 0.11s + 0.1s);
+    }
+  }
+  @keyframes type-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+</style>

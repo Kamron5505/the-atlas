@@ -1,3 +1,7 @@
+import { unicodeSupported } from "./term.js";
+
+const UNICODE = unicodeSupported();
+
 /** Atlas neon-blue palette — shared by CLI (and mirrored by the website). */
 export const C = {
   neon: "#00E5FF",
@@ -16,14 +20,13 @@ export const C = {
 
 export const GRADIENT = ["#7DF9FF", "#00E5FF", "#00B8FF", "#2F7BFF", "#3D5AFE"];
 
-/** Claude-style "thinking" glyph cycle. */
-export const SPARK = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+/** Claude-style "thinking" glyph cycle (ASCII spinner on legacy consoles). */
+export const SPARK = UNICODE ? ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"] : ["-", "\\", "|", "/"];
 
-/**
- * Monochrome, text-presentation glyphs only (no emoji): they render the same
- * in Windows Terminal, conhost, macOS and Linux fonts.
- */
-export const I = {
+/** ink-spinner type: braille dots need a Unicode font. */
+export const SPINNER: "dots" | "line" = UNICODE ? "dots" : "line";
+
+const UNICODE_GLYPHS = {
   reply: "●",
   on: "●",
   off: "○",
@@ -38,7 +41,33 @@ export const I = {
   swap: "⇄",
   arrow: "→",
   last: "↺",
-} as const;
+};
+
+export type Glyphs = { readonly [K in keyof typeof UNICODE_GLYPHS]: string };
+
+/** Same keys in plain ASCII, for legacy conhost / Linux VT / ATLAS_ASCII=1. */
+export const ASCII_GLYPHS: Glyphs = {
+  reply: "*",
+  on: "*",
+  off: "o",
+  ok: "+",
+  fail: "x",
+  warn: "!",
+  pointer: ">",
+  prompt: ">",
+  brand: "#",
+  star: "*",
+  sub: "|_",
+  swap: "<>",
+  arrow: "->",
+  last: "<",
+};
+
+/**
+ * Monochrome, text-presentation glyphs only (no emoji). Falls back to ASCII
+ * when the terminal font can't draw them.
+ */
+export const I: Glyphs = UNICODE ? UNICODE_GLYPHS : ASCII_GLYPHS;
 
 export type Tag = "free" | "key" | "login" | "paid" | "local" | "auto";
 

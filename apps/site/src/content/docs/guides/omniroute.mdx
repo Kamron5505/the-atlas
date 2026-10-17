@@ -1,0 +1,40 @@
+---
+title: "OmniRoute"
+description: "OmniRoute shlyuzini lokal ishga tushiring va uni auto zanjirida birinchi qo'ying."
+sidebar:
+  order: 11
+---
+
+[OmniRoute](https://github.com/diegosouzapw/OmniRoute) alohida, ochiq kodli AI shlyuzi. U ko'plab provayderlarning akkauntlari va bepul tariflarini bitta OpenAI'ga mos endpoint ortida birlashtiradi. The Atlas uni siz uchun o'rnatishi, ishga tushirishi va ulashi mumkin.
+
+## Lokal
+
+```bash
+atlas omniroute
+```
+
+Bu buyruq:
+
+1. OmniRoute bo'lmasa, uni `npm install -g omniroute@latest` bilan o'rnatadi.
+2. Uni ishga tushiradi va `http://localhost:20128` dagi boshqaruv panelini ochadi.
+3. `omniroute` ni auto almashish tartibining boshiga qo'yadi.
+
+Akkaunt va kalitlaringizni OmniRoute panelida qo'shing. The Atlas unga `http://localhost:20128/v1` orqali ulanadi.
+
+Chatda `/omniroute` xuddi shu ishni ulash ustasi orqali bajaradi.
+
+## Masofaviy
+
+Boshqa joyda ishlayotgan OmniRoute'dan foydalanish:
+
+```bash
+atlas omniroute --url https://gw.example.com/v1 --key <key>
+```
+
+URL va kalit `~/.the-atlas/config.json` da (`baseURLs.omniroute`, `keys.omniroute`) saqlanadi. Kalitni `OMNIROUTE_API_KEY` dan ham olish mumkin.
+
+## Eslatmalar
+
+- OmniRoute ishlamayotganda auto rejim uni jimgina o'tkazib yuboradi va keyingi provayderdan foydalanadi.
+- Uni birinchi o'rindan olish uchun `config.json` dagi `order` ni tahrirlang yoki `/provider` bilan boshqa provayderni tanlang.
+- Ishga tushmasa, natijasini ko'rish uchun boshqa terminalda `omniroute` ni ishga tushiring.

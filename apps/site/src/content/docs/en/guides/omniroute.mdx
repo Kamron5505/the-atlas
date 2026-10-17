@@ -1,0 +1,40 @@
+---
+title: "OmniRoute"
+description: "Run the OmniRoute gateway locally and put it first in the auto chain."
+sidebar:
+  order: 11
+---
+
+[OmniRoute](https://github.com/diegosouzapw/OmniRoute) is a separate, open-source AI gateway. It pools accounts and free tiers from many providers behind one OpenAI-compatible endpoint. The Atlas can install, start and connect it for you.
+
+## Local
+
+```bash
+atlas omniroute
+```
+
+This command:
+
+1. Installs OmniRoute with `npm install -g omniroute@latest` if it is missing.
+2. Starts it and opens its dashboard at `http://localhost:20128`.
+3. Moves `omniroute` to the front of the auto fallback order.
+
+Add your accounts and keys in the OmniRoute dashboard. The Atlas talks to it at `http://localhost:20128/v1`.
+
+In the chat, `/omniroute` does the same through the connect wizard.
+
+## Remote
+
+Use an OmniRoute instance running elsewhere:
+
+```bash
+atlas omniroute --url https://gw.example.com/v1 --key <key>
+```
+
+The URL and key are saved in `~/.the-atlas/config.json` (`baseURLs.omniroute`, `keys.omniroute`). The key can also come from `OMNIROUTE_API_KEY`.
+
+## Notes
+
+- When OmniRoute is not running, auto mode skips it silently and uses the next provider.
+- To stop using it first, edit `order` in `config.json`, or pick another provider with `/provider`.
+- If it does not start, run `omniroute` in another terminal to see its output.

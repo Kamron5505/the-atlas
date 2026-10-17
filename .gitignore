@@ -4,3 +4,7 @@ dist/
 .env*
 *.session
 coverage/
+
+# site
+apps/site/dist/
+.astro/

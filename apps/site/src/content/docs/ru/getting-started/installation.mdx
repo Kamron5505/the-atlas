@@ -1,0 +1,155 @@
+---
+title: "Установка"
+description: "Установка The Atlas CLI на Windows, macOS или Linux через npm."
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Aside, Steps } from '@astrojs/starlight/components';
+
+The Atlas это npm-пакет. Нужен **Node.js 22 или новее**.
+
+## Установка
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+<Steps>
+
+1. Установите Node.js 22+ (пропустите шаг, если `node --version` уже показывает 22 или выше):
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+
+   Или скачайте установщик с [nodejs.org](https://nodejs.org/en/download). После установки откройте новый терминал.
+
+2. Установите The Atlas:
+
+   ```powershell
+   npm i -g the-atlas
+   ```
+
+3. Запустите:
+
+   ```powershell
+   atlas
+   ```
+
+</Steps>
+
+<Aside type="tip">
+Для полного цвета и иконок используйте [Windows Terminal](https://aka.ms/terminal). Старая консоль (cmd или Windows PowerShell 5.1 в отдельном окне) тоже работает, но с простыми ASCII-символами. См. [Терминалы](/ru/getting-started/terminals/).
+</Aside>
+
+</TabItem>
+<TabItem label="macOS">
+
+<Steps>
+
+1. Установите Node.js 22+ (пропустите шаг, если `node --version` уже показывает 22 или выше):
+
+   ```bash
+   brew install node
+   ```
+
+   Или скачайте установщик с [nodejs.org](https://nodejs.org/en/download).
+
+2. Установите The Atlas:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+3. Запустите:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+<TabItem label="Linux">
+
+<Steps>
+
+1. Установите Node.js 22+ (пропустите шаг, если `node --version` уже показывает 22 или выше). Пакеты дистрибутивов часто старые; используйте [nodejs.org](https://nodejs.org/en/download) или менеджер версий, например nvm:
+
+   ```bash
+   nvm install 22
+   ```
+
+2. Установите The Atlas:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+   Если npm падает с `EACCES`, ваша глобальная папка npm принадлежит root. Используйте nvm или задайте пользовательский префикс (`npm config set prefix ~/.local`) вместо `sudo`.
+
+3. Запустите:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+## Проверка установки
+
+```bash
+atlas --version
+atlas doctor
+```
+
+`atlas doctor` проверяет Node, npm, git, bash и Python, показывает, что он определил о вашем терминале, и пингует каждого подключённого провайдера.
+
+## Обновление
+
+```bash
+npm i -g the-atlas@latest
+```
+
+Ключи, чаты и настройки хранятся в `~/.the-atlas/` и сохраняются после обновления.
+
+## Удаление
+
+```bash
+npm uninstall -g the-atlas
+```
+
+Данные при этом остаются. Чтобы удалить ключи, историю чатов и настройки, удалите папку с данными:
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.the-atlas"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+<TabItem label="Linux">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+</Tabs>
+
+Если вы задавали `ATLAS_HOME`, удалите ту папку. Если вы ставили строку состояния в Claude Code, удалите запись `statusLine` из `~/.claude/settings.json`.
+
+## Дальше
+
+[Быстрый старт](/ru/getting-started/quickstart/): подключите бесплатный ИИ и задайте первый вопрос.

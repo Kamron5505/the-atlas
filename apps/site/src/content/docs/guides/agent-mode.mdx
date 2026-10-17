@@ -1,0 +1,67 @@
+---
+title: "Agent rejimi"
+description: "AI loyihangizda fayllarni o'qisin, tahrirlasin va buyruqlarni ishga tushirsin, har bir o'zgarish sizning ruxsatingiz bilan."
+sidebar:
+  order: 5
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Agent rejimida AI joriy papkadagi loyiha ustida ishlaydi: vazifa bajarilguncha fayllarni o'qiydi, qidiradi, tahrirlaydi va buyruqlarni ishga tushiradi.
+
+```bash
+atlas agent "add unit tests for src/date.ts"
+atlas agent -p groq "fix the failing lint errors"
+```
+
+Chatda:
+
+```text
+/agent rename the config option "verbose" to "debug" everywhere
+```
+
+Chatdan ishga tushirilganda agent shu paytgacha bo'lgan suhbatni ko'radi. Agent rejimi ruxsat so'ragani uchun interaktiv terminal talab qiladi.
+
+## Vositalar
+
+| Vosita | Nima qiladi | Oldin so'raydimi |
+|---|---|---|
+| `read_file` | Matnli faylni o'qish (bir chaqiruvda 2000 qatorgacha) | yo'q |
+| `list_dir` | Papka ro'yxati | yo'q |
+| `search` | Fayllar bo'ylab regex qidiruv (`node_modules`, `.git`, `dist` o'tkazib yuboriladi) | yo'q |
+| `write_file` | Fayl yaratish yoki ustidan yozish | **ha** |
+| `edit_file` | Fayldagi aniq matnni almashtirish | **ha** |
+| `run_command` | Loyiha papkasida shell buyrug'ini ishga tushirish | **ha** |
+| MCP vositalari | [MCP serverlaringiz](/guides/mcp/) dagi vositalar | **ha, doim** |
+
+## Ruxsatlar
+
+Har bir o'zgarishdan oldin ko'rinish chiqadi: tahrirlar uchun diff, `run_command` uchun to'liq buyruq qatori. Keyin tanlang:
+
+| Javob | Natija |
+|---|---|
+| **Ha** | Faqat shu chaqiruvni bajarish |
+| **Ha, bu sessiyada boshqa so'rama** | Bajarish va agent ishini tugatguncha bu vositaga so'ramasdan ruxsat berish |
+| **Yo'q, boshqa narsa qil** | Chaqiruvni o'tkazib yuborish; AI'ga rad etganingiz aytiladi |
+
+`↑` `↓` tanlaydi, `Enter` tasdiqlaydi, `Esc` Yo'q degani. Agent ishlayotganda `Esc` uni to'xtatadi.
+
+Oxirida xulosa chiqadi: bajarilgan qadamlar va o'zgargan fayllar. Agent 25 qadamdan keyin to'xtaydi; kerak bo'lsa, davom ettirishni so'rang.
+
+## Xavfsizlik
+
+- **Faqat loyiha.** Fayl vositalari har bir yo'lni agent ishga tushirilgan papka ichida hal qiladi. Undan tashqaridagi yo'llar, jumladan symlink orqali bo'lganlari ham rad etiladi.
+- **Maxfiy fayllar bloklangan.** Agent `.env` va `.env.*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, SSH kalitlari (`id_rsa`, `id_ed25519` va shunga o'xshashlar), `.ssh/` yoki `.aws/` ichidagi hamma narsa, `~/.the-atlas/config.json` va `~/.claude/.credentials.json` ni o'qiy olmaydi va yoza olmaydi.
+- **Buyruqlar.** `run_command` Windows'da Windows PowerShell 5.1, boshqa tizimlarda bash ishlatadi. Standart vaqt chegarasi 2 daqiqa (ko'pi bilan 10 daqiqa), agentni to'xtatsangiz buyruq ham to'xtatiladi. Kontekst kichik qolishi uchun chiqish qisqartiriladi.
+
+<Aside type="caution">
+`run_command` va MCP vositalari foydalanuvchi akkauntingiz qila oladigan hamma narsani qila oladi. Yuqoridagi yo'l qoidalari shell buyruqlariga emas, faqat ichki fayl vositalariga tegishli. Har bir buyruqni tasdiqlashdan oldin o'qing va `run_command` uchun **Ha, boshqa so'rama** o'rniga **Ha** ni tanlang. O'zgarishlarni ko'rib chiqish va bekor qilish uchun git'dan foydalaning.
+</Aside>
+
+## Model tanlash
+
+Agent rejimiga tool calling'ni qo'llab-quvvatlaydigan model kerak. Auto rejimda model vositalarni rad etsa, The Atlas keyingisiga o'tadi. Modelni qat'iy belgilash uchun:
+
+```bash
+atlas agent -p openrouter -m openrouter/free "..."
+```

@@ -46,6 +46,20 @@ export function isSecretPath(p: string): boolean {
   return false;
 }
 
+/**
+ * Makes model-supplied text safe to show in an approval prompt: control chars
+ * (ANSI escapes, \r, backspace) and bidi/zero-width marks are shown as \xNN or
+ * \uNNNN instead of being interpreted by the terminal, so they cannot hide text.
+ */
+export function visible(s: string): string {
+  return s
+    .replace(/\t/g, "  ")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g, (c) => {
+      const n = c.charCodeAt(0);
+      return n < 0x100 ? `\\x${n.toString(16).padStart(2, "0")}` : `\\u${n.toString(16).padStart(4, "0")}`;
+    });
+}
+
 export class PathError extends Error {}
 
 const fold = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);

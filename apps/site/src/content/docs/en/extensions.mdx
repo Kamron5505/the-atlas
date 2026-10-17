@@ -1,0 +1,44 @@
+---
+title: "Extensions"
+description: "Extend The Atlas with MCP servers and 47 external AI agents."
+sidebar:
+  order: 1
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The Atlas grows in two ways: **MCP servers** give its agent mode new tools, and the **agent catalog** launches other AI command-line tools.
+
+<CardGrid>
+  <LinkCard title="MCP servers" description="Browser, GitHub, databases, Google Drive and any MCP server, as tools for agent mode." href="/en/guides/mcp/" />
+  <LinkCard title="Agent catalog" description="47 AI CLI agents with install commands, login type and Windows support." href="/en/extensions/agents/" />
+</CardGrid>
+
+## MCP presets
+
+Add one with `atlas mcp add <preset>`:
+
+| Preset | What it gives the agent |
+|---|---|
+| `filesystem` | File access, limited to the current folder |
+| `github` | GitHub repositories, issues and pull requests (needs a token) |
+| `browser` | A Playwright-controlled browser |
+| `memory` | A persistent knowledge graph |
+| `sequential-thinking` | Step-by-step reasoning tool |
+| `sqlite` | A SQLite database file |
+| `postgres` | A PostgreSQL database |
+| `gdrive` | Google Drive |
+
+Any other server: `atlas mcp add <name> -- <command>` or `atlas mcp add <name> --url <url>`. Servers you already use in Claude Desktop: `atlas mcp import claude`.
+
+Every MCP tool call asks for your approval.
+
+## Agent catalog
+
+`atlas agents` opens a searchable list of 47 agents, including Claude Code, OpenAI Codex, Gemini CLI, GitHub Copilot, Aider, OpenCode, Goose and Ollama. Pick one and The Atlas installs it if needed and opens it in a new window. With `Tab` (or `atlas run <agent> --free`) the agent runs on your Atlas free models.
+
+- [Full agent table](/en/extensions/agents/)
+- [How the launcher works](/en/guides/agents/)
+- [Add your own agents](/en/guides/agents/#add-your-own-agents)
+
+The agent catalog comes from [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI) (MIT).

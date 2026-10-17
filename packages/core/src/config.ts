@@ -48,7 +48,7 @@ export function loadConfig(): AtlasConfig {
 }
 
 export function saveConfig(cfg: AtlasConfig): void {
-  mkdirSync(atlasHome(), { recursive: true });
+  mkdirSync(atlasHome(), { recursive: true, mode: 0o700 });
   const path = configPath();
   writeFileSync(path, JSON.stringify(cfg, null, 2), { encoding: "utf8", mode: 0o600 });
   try {

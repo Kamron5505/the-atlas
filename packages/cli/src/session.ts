@@ -36,11 +36,12 @@ export function titleOf(messages: ChatMessage[]): string {
 /** Atomic save; empty chats are not written. */
 export function saveSession(s: Session): void {
   if (!s.messages.some((m) => m.role === "user")) return;
-  mkdirSync(dir(), { recursive: true });
+  // Chats may hold pasted secrets and attached files: owner-only on POSIX.
+  mkdirSync(dir(), { recursive: true, mode: 0o700 });
   s.updated = new Date().toISOString();
   s.title ||= titleOf(s.messages);
   const file = join(dir(), `${s.id}.json`);
-  writeFileSync(`${file}.tmp`, JSON.stringify(s));
+  writeFileSync(`${file}.tmp`, JSON.stringify(s), { mode: 0o600 });
   renameSync(`${file}.tmp`, file);
 }
 

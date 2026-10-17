@@ -121,13 +121,14 @@ describe("status line", () => {
     expect(gradient(0.5)).toEqual([220, 200, 0]);
     expect(gradient(1)).toEqual([220, 40, 20]);
     expect([5, 20, 69, 70, 89, 90].map(usageEmoji)).toEqual(["🟢", "⚡️", "⚡️", "🔥", "🔥", "🚨"]);
-    const bar = contextBar(50);
+    // Explicit style: the shell running tests may set NO_COLOR.
+    const bar = contextBar(50, 20, { depth: 24, emoji: true, unicode: true });
     expect(strip(bar)).toBe("█".repeat(20));
     expect(bar.match(/38;2;60;60;60m/g)).toHaveLength(10);
   });
 
   it("renders all elements in order with dim pipes", () => {
-    const line = strip(renderStatusline({ repo: "the-atlas", branch: "main", usedPct: 47, costUsd: 0.4213, added: 12, removed: 3, model: "Opus 5.5" }));
+    const line = strip(renderStatusline({ repo: "the-atlas", branch: "main", usedPct: 47, costUsd: 0.4213, added: 12, removed: 3, model: "Opus 5.5" }, { depth: 24, emoji: true, unicode: true }));
     expect(line).toBe(`the-atlas | 🌿 (main) | ⚡️ ${"█".repeat(20)} 47% | $0.42 | +12 -3 | 🤖 Opus 5.5`);
   });
 

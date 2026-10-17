@@ -1,6 +1,6 @@
 import { routeAgentStep, type AtlasConfig, type ChatMessage, type ToolCall, type ToolCallMessage } from "@the-atlas/core";
 import type { Lang } from "../i18n.js";
-import type { BuiltinTool } from "./tools.js";
+import { visible, type BuiltinTool } from "./tools.js";
 import type { AgentTool, ApprovalAnswer, ApprovalRequest, ToolResult } from "./types.js";
 
 /** Progress events for the UI. */
@@ -163,7 +163,7 @@ export async function runAgent(o: RunAgentOptions): Promise<AgentResult> {
         continue;
       }
       if (tool.risk === "write" && !allowed.has(tool.name)) {
-        const preview = (tool as BuiltinTool).preview?.(args, { cwd: o.cwd, signal: o.signal }) ?? JSON.stringify(args, null, 2).slice(0, 2000);
+        const preview = visible((tool as BuiltinTool).preview?.(args, { cwd: o.cwd, signal: o.signal }) ?? JSON.stringify(args, null, 2).slice(0, 2000));
         const request: ApprovalRequest = { tool, args, preview };
         emit({ type: "approval", request });
         let a: ApprovalAnswer;

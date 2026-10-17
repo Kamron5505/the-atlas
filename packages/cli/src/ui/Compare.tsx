@@ -4,7 +4,7 @@ import Spinner from "ink-spinner";
 import { useEffect, useRef, useState } from "react";
 import type { Dict } from "../i18n.js";
 import { recordLimited, recordRequest } from "../limits.js";
-import { C, I } from "./theme.js";
+import { C, I, SPINNER } from "./theme.js";
 
 export interface CompareTarget {
   provider: string;
@@ -133,7 +133,7 @@ export function Compare({
                 </Text>
               </Text>
               <Text color={C.dim}>
-                {r.done ? (r.error ? <Text color={C.err}>{I.fail}</Text> : <Text color={C.ok}>{I.ok}</Text>) : <Spinner type="dots" />} {secs(r.total)}
+                {r.done ? (r.error ? <Text color={C.err}>{I.fail}</Text> : <Text color={C.ok}>{I.ok}</Text>) : <Spinner type={SPINNER} />} {secs(r.total)}
                 {r.ttft !== undefined && <Text color={C.faint}> · {L.firstToken} {secs(r.ttft)}</Text>}
                 <Text color={C.faint}> · {r.text.length} ch</Text>
                 {fastest === r && allDone && <Text color={C.ok}> · {L.fastest}</Text>}

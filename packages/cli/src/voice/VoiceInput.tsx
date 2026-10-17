@@ -3,7 +3,7 @@ import { Box, Text, useInput } from "ink";
 import Spinner from "ink-spinner";
 import React, { useEffect, useRef, useState } from "react";
 import type { Lang } from "../i18n.js";
-import { C, I } from "../ui/theme.js";
+import { C, I, SPINNER } from "../ui/theme.js";
 import type { VoiceDict } from "./i18n.js";
 import { remove, startRecording, VoiceError, type Recording, type RecordOptions } from "./record.js";
 import { transcribe, voiceError, type TranscribeOptions } from "./transcribe.js";
@@ -118,7 +118,7 @@ export function VoiceInput({ cfg, L, lang, onDone, onError, device, maxSeconds =
     return (
       <Box>
         <Text color={C.neon}>
-          <Spinner type="dots" />
+          <Spinner type={SPINNER} />
         </Text>
         <Text color={C.dim}> {L.starting}</Text>
       </Box>
@@ -128,7 +128,7 @@ export function VoiceInput({ cfg, L, lang, onDone, onError, device, maxSeconds =
     return (
       <Box>
         <Text color={C.neon}>
-          <Spinner type="dots" />
+          <Spinner type={SPINNER} />
         </Text>
         <Text color={C.text}> {L.transcribing}</Text>
         <Text color={C.faint}> · esc — {L.cancel}</Text>

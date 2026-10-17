@@ -1,0 +1,89 @@
+---
+title: "Голосовой ввод"
+description: "Говорите вместо набора: ffmpeg записывает, Groq Whisper превращает речь в текст."
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+
+Нажмите `ctrl+r` в чате, говорите, нажмите `Enter`. Распознанный текст вставляется в поле ввода (но не отправляется), так что его можно сначала поправить.
+
+## Настройка
+
+<Steps>
+
+1. **Установите ffmpeg** (он записывает микрофон):
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   winget install Gyan.FFmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   brew install ffmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   sudo apt install ffmpeg
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   После установки откройте новый терминал. Если ffmpeg установлен там, где The Atlas его не находит, задайте в `ATLAS_FFMPEG` полный путь к нему.
+
+2. **Подключите Groq** для распознавания речи (бесплатно):
+
+   ```bash
+   atlas connect groq
+   ```
+
+   The Atlas использует `whisper-large-v3-turbo` от Groq. Без ключа Groq он переходит на OpenAI `whisper-1`, если подключён ключ OpenAI.
+
+</Steps>
+
+## В чате
+
+| Клавиша | Действие |
+|---|---|
+| `ctrl+r` или `/voice` | Начать запись |
+| `Enter` | Остановить и распознать |
+| `Esc` | Отменить; ничего не отправляется |
+
+Уже введённый текст сохраняется; распознанный текст добавляется в конец.
+
+## Из оболочки
+
+`atlas voice` записывает один раз и печатает текст в stdout, так что его можно передать по pipe:
+
+```bash
+atlas voice
+atlas voice -l ru                 # подсказка языка: uz, ru или en
+atlas voice -s 30                 # остановить через 30 секунд (по умолчанию 120)
+atlas voice | atlas ask           # спросить голосом
+```
+
+## Выбор микрофона
+
+```bash
+atlas voice devices               # список микрофонов; текущий отмечен
+atlas voice device 2              # запомнить микрофон номер 2
+atlas voice device "USB Mic"      # или по имени
+atlas voice device auto           # вернуть системный по умолчанию
+atlas voice -d 2                  # только для этой записи
+```
+
+Выбор сохраняется в `~/.the-atlas/voice.json`.
+
+<Aside>
+Записи отправляются только провайдеру распознавания (Groq или OpenAI) и затем удаляются. Размер загрузки ограничен 25 MB. На macOS разрешите доступ к микрофону для вашего терминала в «Системных настройках».
+</Aside>

@@ -1,0 +1,64 @@
+---
+title: "Agentlar katalogi"
+description: "atlas agents o'rnatishi va ishga tushirishi mumkin bo'lgan barcha 47 ta AI CLI agent."
+sidebar:
+  order: 2
+---
+
+{/* Generated from packages/cli/agents.conf (Uzbek originals). Do not edit by hand. */}
+
+47 ta agent. Tanlash oynasini `atlas agents` (yoki chatda `/agents`) bilan oching yoki agentni to'g'ridan-to'g'ri `atlas run <name>` bilan ishga tushiring. Batafsil: [AI agentlar ishga tushirgichi](/guides/agents/).
+
+**Windows** ustuni: **Ha** = Windows'ga to'g'ridan-to'g'ri o'rnatiladi (npm, pip, winget yoki PowerShell). **Git Bash yoki WSL kerak** = o'rnatuvchi bash skript. **Faqat WSL** = Windows uchun versiyasi yo'q. **Qo'lda** = havola orqali o'zingiz o'rnatasiz.
+
+| Agent | Buyruq | Kategoriya | Tavsif | Kirish | Windows |
+|---|---|---|---|---|---|
+| [Claude Code](https://console.anthropic.com/settings/keys) | `claude` | Dasturlash | Anthropic'ning rasmiy Claude kod agenti | **Obuna**: ANTHROPIC_API_KEY yoki Claude Pro/Max | Ha |
+| [OpenAI Codex](https://platform.openai.com/api-keys) | `codex` | Dasturlash | OpenAI Codex terminal agenti | **Brauzer orqali kirish**: ChatGPT login yoki OPENAI_API_KEY | Ha |
+| [Gemini CLI](https://aistudio.google.com/apikey) | `gemini` | Dasturlash | Google Gemini terminal agenti | **Bepul tarif**: Google login yoki GEMINI_API_KEY | Ha |
+| [GitHub Copilot](https://github.com/features/copilot) | `copilot` | Dasturlash | GitHub Copilot CLI agenti | **Obuna**: GitHub + Copilot obunasi | Ha |
+| [OpenCode](https://opencode.ai/docs) | `opencode` | Dasturlash | Ochiq manbali terminal coding agenti | **API kalit**: provayder API kaliti (lokal modellar ham) | Ha |
+| [Crush](https://github.com/charmbracelet/crush) | `crush` | Dasturlash | Charm'ning chiroyli AI coding agenti | **API kalit**: provayder API kaliti | Ha |
+| [Qwen Code](https://github.com/QwenLM/qwen-code) | `qwen` | Dasturlash | Alibaba Qwen Code CLI agenti | **Bepul tarif**: Qwen login yoki API kalit | Ha |
+| [Continue](https://hub.continue.dev) | `cn` | Dasturlash | Continue.dev terminal agenti | **Bepul tarif**: Continue login yoki API kalit | Ha |
+| [Cursor Agent](https://docs.cursor.com/en/cli/overview) | `cursor-agent` | Dasturlash | Cursor'ning terminal agenti | **Brauzer orqali kirish**: Cursor hisobiga login | Ha |
+| [Plandex](https://docs.plandex.ai) | `plandex` | Dasturlash | Katta vazifalarni rejalashtiruvchi agent | **Brauzer orqali kirish**: Plandex login yoki API kalit | Faqat WSL |
+| [Freebuff](https://freebuff.com/) | `freebuff` | Dasturlash | Freebuff terminal CLI agenti | **Bepul tarif**: freebuff.com orqali login/kalit | Ha |
+| [Codebuff](https://www.codebuff.com/) | `codebuff` | Dasturlash | Multi-agentli terminal kod yordamchisi (codebase'ni chuqur tushunadi) | **Bepul tarif**: bepul kredit, keyin API kalit yoki obuna | Ha |
+| [Amp](https://ampcode.com/manual) | `amp` | Dasturlash | Sourcegraph'ning Amp kod agenti | **Brauzer orqali kirish**: Amp login yoki API kalit | Ha |
+| [Droid](https://docs.factory.ai/cli/getting-started/quickstart) | `droid` | Dasturlash | Factory AI'ning terminal kod agenti | **Brauzer orqali kirish**: Factory hisobiga login | Ha |
+| [Auggie](https://docs.augmentcode.com/cli/overview) | `auggie` | Dasturlash | Augment Code agenti, katta kodbazalar uchun | **Obuna**: Augment login · obuna | Ha |
+| [Jules](https://jules.google) | `jules` | Dasturlash | Google'ning asinxron kod agenti (terminaldan) | **Bepul tarif**: Google login | Ha |
+| [Forge](https://forgecode.dev/docs) | `forge` | Dasturlash | Ko'p-modelli ochiq terminal kod agenti | **API kalit**: provayder API kaliti (OpenRouter va h.k.) | Ha |
+| [iFlow CLI](https://platform.iflow.cn) | `iflow` | Dasturlash | Bepul terminal kod agenti (Qwen · Kimi · GLM modellari) | **Bepul tarif**: iFlow login | Ha |
+| [Qodo Command](https://docs.qodo.ai) | `qodo` | Dasturlash | Qodo'ning test va kod sifatiga yo'naltirilgan agenti | **Bepul tarif**: bepul tier yoki API kalit | Ha |
+| [CodeBuddy](https://www.codebuddy.ai) | `codebuddy` | Dasturlash | Tencent CodeBuddy terminal kod agenti | **Brauzer orqali kirish**: CodeBuddy login yoki API kalit | Ha |
+| [Kimi CLI](https://platform.moonshot.ai) | `kimi` | Dasturlash | Moonshot Kimi terminal kod agenti (Python 3.12+) | **Brauzer orqali kirish**: MOONSHOT_API_KEY yoki Kimi login | Ha |
+| [Nanocoder](https://github.com/Nano-Collective/nanocoder) | `nanocoder` | Dasturlash | Lokal modellar bilan ishlaydigan ochiq kod agenti | **Bepul tarif**: bepul (ochiq manba), lokal model yoki kalit | Ha |
+| [Micro Agent](https://github.com/BuilderIO/micro-agent) | `micro-agent` | Dasturlash | Testdan kod yozadigan mayda agent (Builder.io) | **API kalit**: OPENAI_API_KEY yoki boshqa provayder | Ha |
+| [Amazon Q](https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/command-line-installing.html) | `q chat` | Dasturlash | AWS'ning terminal AI yordamchisi (qo'lda o'rnatiladi) | **Bepul tarif**: AWS Builder ID | Faqat WSL |
+| [Cody](https://sourcegraph.com/docs/cody) | `cody` | Dasturlash | Sourcegraph Cody CLI, kod izlash bilan birga AI | **Brauzer orqali kirish**: Sourcegraph login yoki SRC_ACCESS_TOKEN | Ha |
+| [Aider](https://aider.chat/docs/llms.html) | `aider` | Juft dasturlash | AI juftlik dasturlash (pair programming) | **API kalit**: provayder API kaliti (OpenAI/Anthropic/OpenRouter) | Ha |
+| [Goose](https://block.github.io/goose/docs/quickstart) | `goose session` | Agent | Block'ning avtonom AI agenti | **API kalit**: provayder API kaliti | Ha |
+| [Ollama](https://ollama.com/download) | `ollama run llama3.2` | Lokal | Lokal LLM'larni ishga tushiruvchi (offline) | **Bepul tarif**: bepul, lokal, login shart emas | Ha |
+| [llm](https://llm.datasette.io/en/stable/setup.html) | `llm` | Chat | Simon Willison'ning ko'p-provayderli LLM CLI'i | **API kalit**: provayder API kaliti | Ha |
+| [AIChat](https://github.com/sigoden/aichat/wiki/Configuration-Guide) | `aichat` | Chat | Hammasi-birda LLM CLI (chat + REPL + agent) | **API kalit**: provayder API kaliti | Ha |
+| [Shell GPT](https://github.com/TheR1D/shell_gpt) | `sgpt` | Chat | Buyruq satri uchun AI yordamchi (sgpt) | **API kalit**: provayder API kaliti (OpenAI/lokal) | Ha |
+| [Mods](https://github.com/charmbracelet/mods) | `mods` | Chat | Pipe asosidagi AI, terminal oqimlari uchun (Charm) | **API kalit**: provayder API kaliti | Ha |
+| [AI Shell](https://github.com/BuilderIO/ai-shell) | `ai-shell` | Chat | Tabiiy tilni shell buyrug'iga aylantiradi (Builder.io) | **API kalit**: OPENAI_API_KEY | Ha |
+| [Fabric](https://github.com/danielmiessler/fabric) | `fabric` | Chat | Tayyor promptlar (pattern) kutubxonasi bilan AI CLI | **Bepul tarif**: bepul (ochiq manba), provayder kaliti | Ha |
+| [Gorilla CLI](https://github.com/gorilla-llm/gorilla-cli) | `gorilla` | Chat | Tabiiy tildan terminal buyrug'ini taklif qiladi (UC Berkeley) | **Bepul tarif**: bepul, API kalit shart emas | Ha |
+| [Open Interpreter](https://docs.openinterpreter.com) | `interpreter` | Agent | Lokal kodni bajaruvchi tabiiy-til agenti | **Bepul tarif**: bepul (ochiq manba), yoki lokal model | Ha |
+| [OpenHands](https://docs.openhands.dev) | `openhands` | Agent | Avtonom dasturchi agenti (terminal + kod) | **Bepul tarif**: bepul (ochiq manba), LLM kaliti | Ha |
+| [SWE-agent](https://swe-agent.com) | `sweagent` | Agent | GitHub issue'larini avtonom yechuvchi agent | **Bepul tarif**: bepul (ochiq manba), API kalit | Ha |
+| [gptme](https://gptme.org) | `gptme` | Agent | Terminal agenti: shell, kod, brauzer (ochiq manba) | **Bepul tarif**: bepul (ochiq manba), yoki lokal model | Ha |
+| [gpt-engineer](https://gpt-engineer.readthedocs.io) | `gpte` | Agent | Tavsifdan butun loyihani yozadigan agent | **Bepul tarif**: bepul (ochiq manba), OPENAI_API_KEY | Ha |
+| [Cline CLI](https://cline.bot/cli) | `cline` | Dasturlash | Model-agnostik terminal coding agenti | **Bepul tarif**: bepul (akkaunt) yoki API kalit | Ha |
+| [Kilo CLI](https://kilo.ai/cli) | `kilo` | Dasturlash | 500+ modelli ochiq agent (MiniMax bepul) | **Bepul tarif**: bepul (MiniMax M2.5) yoki API kalit | Ha |
+| [Grok Build](https://x.ai/cli) | `grok` | Dasturlash | xAI'ning terminal coding agenti | **Obuna**: SuperGrok/X Premium · brauzer login | Ha |
+| [Antigravity](https://antigravity.google) | `antigravity` | Dasturlash | Google'ning agentik IDE'si (qo'lda yuklab olinadi) | **Bepul tarif**: bepul (preview), Google login | Ha |
+| [GitHub CLI](https://cli.github.com) | `gh` | Vositalar | GitHub ish oqimlarini avtomatlashtirish (PR, issue) | **Bepul tarif**: bepul, GitHub login (gh auth login) | Ha |
+| [CodeRabbit](https://www.coderabbit.ai/cli) | `coderabbit` | Vositalar | Terminalda ishlaydigan AI kod-review agenti | **Bepul tarif**: CodeRabbit login | Ha |
+| [aicommits](https://github.com/Nutlope/aicommits) | `aicommits` | Vositalar | Git commit xabarlarini AI yozib beradi | **API kalit**: OPENAI_API_KEY | Ha |
+
+Katalog [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI) (MIT) asosida tayyorlangan.

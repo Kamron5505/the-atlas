@@ -1,0 +1,34 @@
+---
+title: "Javoblarni solishtirish"
+description: "Bitta savolni 2 yoki 3 ta AI'ga yonma-yon bering va eng yaxshi javobni qoldiring."
+sidebar:
+  order: 4
+---
+
+`/compare` bitta savolni bir vaqtda ikki yoki uchta AI'ga yuboradi. Javoblar yonma-yon chiqadi (tor terminallarda ustma-ust), birinchi so'zgacha bo'lgan vaqt va umumiy vaqt bilan; eng tezi belgilanadi.
+
+## Foydalanish
+
+```text
+/compare what is the difference between let and const?
+/compare groq gemini openrouter explain CORS in one paragraph
+/compare groq/llama-3.3-70b-versatile gemini/gemini-2.5-flash write a regex for emails
+```
+
+- Boshidagi provayder ID'lari (yoki `provider/model`) AI'larni tanlaydi. Ko'pi bilan 3 tasi ishlatiladi.
+- Ular bo'lmasa, The Atlas birinchi uchta ulangan AI'ni oladi.
+- Kamida ikkita ulangan AI kerak. Ko'proq ulash uchun `/connect` dan foydalaning.
+
+Savolsiz `/compare` yozsangiz, u tayyor holatga o'tadi: kiritish belgisi `⇄` ga o'zgaradi va keyingi xabaringiz solishtiriladi. `Esc` buni bekor qiladi.
+
+Solishtirilayotgan savollarda ham `@fayl` biriktirish ishlaydi.
+
+## Javobni tanlash
+
+| Tugma | Amal |
+|---|---|
+| `←` `→` | Javobni tanlash |
+| `Enter` | Uni qoldirish |
+| `Esc` | Hech birini qoldirmaslik; hali kelayotgan javoblarni to'xtatadi |
+
+Barcha javoblar chatga chiqariladi. Qoldirilgan javob suhbatga qo'shiladi va uning AI'si joriy modelga aylanadi, shuning uchun suhbatni o'sha yerdan davom ettirishingiz mumkin.

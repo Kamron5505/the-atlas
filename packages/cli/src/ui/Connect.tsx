@@ -7,7 +7,7 @@ import type { Dict } from "../i18n.js";
 import { loginOpenRouter } from "../oauth.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "../system.js";
 import { Select, type SelectItem } from "./Select.js";
-import { C, I } from "./theme.js";
+import { C, I, SPINNER } from "./theme.js";
 
 type Step =
   | { kind: "pick" }
@@ -187,7 +187,7 @@ export function Connect({
       {step.kind === "oauth" && (
         <>
           <Text color={C.glow}>
-            <Spinner type="dots" /> {L.oauthWait}
+            <Spinner type={SPINNER} /> {L.oauthWait}
           </Text>
           <Box paddingLeft={2}>
             <Text color={C.faint}>{L.oauthManual}</Text>
@@ -196,7 +196,7 @@ export function Connect({
       )}
       {step.kind === "busy" && (
         <Text color={C.glow}>
-          <Spinner type="dots" /> {step.text}
+          <Spinner type={SPINNER} /> {step.text}
         </Text>
       )}
       {step.kind === "error" && (

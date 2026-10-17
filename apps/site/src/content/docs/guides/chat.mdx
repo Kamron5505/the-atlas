@@ -1,0 +1,87 @@
+---
+title: "Chat asoslari"
+description: "Slash buyruqlar, kiritish tarixi, javobni to'xtatish, fayl va rasm biriktirish, saqlangan chatlar."
+sidebar:
+  order: 1
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Chatni `atlas` bilan oching (`atlas chat` bilan bir xil). Sarlavhada qaysi AI'lar ulangani va qaysi model tanlangani ko'rinadi.
+
+```bash
+atlas                          # new chat
+atlas -c                       # continue the last chat in this folder
+atlas chat -p groq             # use one provider
+atlas chat -p openrouter -m openrouter/free
+```
+
+## Slash buyruqlar
+
+Buyruqlar menyusini ochish uchun `/` yozing. Filtrlash uchun yozishda davom eting, `↑` `↓` bilan harakatlaning, `Tab` bilan to'ldiring, `Enter` bilan ishga tushiring.
+
+Eng ko'p ishlatiladiganlari:
+
+| Buyruq | Nima qiladi |
+|---|---|
+| `/connect` | AI ulash |
+| `/model` | Model tanlash; `/model groq/llama-3.3-70b-versatile` modelni to'g'ridan-to'g'ri o'rnatadi |
+| `/provider auto` | Ulangan AI'lar orasida avtomatik almashishga qaytish |
+| `/clear` | Yangi suhbat boshlash |
+| `/help` | Barcha buyruqlar va tugmalar |
+
+To'liq ro'yxat: [Slash buyruqlar](/reference/slash-commands/).
+
+## Chatdagi tugmalar
+
+| Tugma | Amal |
+|---|---|
+| `Enter` | Yuborish |
+| `↑` `↓` | Oldingi va keyingi yuborilgan xabarlar (menyu ochiq bo'lmaganda) |
+| `Esc` | Javob kelayotganda uni to'xtatadi; aks holda kiritishni tozalaydi |
+| `Tab` | `/buyruq` yoki `@yo'l` ni to'ldirish |
+| `ctrl+r` | [Ovozli kiritish](/guides/voice/) |
+| `ctrl+c` | Chiqish |
+
+Javobni to'xtatsangiz, kelib bo'lgan qismi chatda "to'xtatildi" belgisi bilan qoladi.
+
+## @ bilan fayl va rasm biriktirish
+
+Xabaringizning istalgan joyiga `@yo'l` qo'ying. `@` yozayotganingizda menyu fayl va papkalarni taklif qiladi; `Tab` to'ldiradi.
+
+```text
+› @src/app.ts @package.json why does the build fail?
+› @"docs/my notes.md" summarize
+› @screenshot.png what is wrong in this UI?
+› @src/ what is in this folder?
+```
+
+| Nima biriktirasiz | AI nima oladi | Chegara |
+|---|---|---|
+| Matnli fayl | Fayl mazmuni | 256 KB |
+| Rasm (`.png` `.jpg` `.jpeg` `.webp` `.gif`) | Rasmning o'zi | 5 MB |
+| Papka | Ichidagi elementlar ro'yxati (200 tagacha; `node_modules`, `.git`, `dist` va shunga o'xshashlar o'tkazib yuboriladi) | |
+
+Yo'llar `atlas` ishga tushirilgan papkaga nisbatan olinadi. Bo'sh joyli yo'llarni qo'shtirnoqqa oling. Binar fayllar, mavjud bo'lmagan fayllar va chegaradan katta fayllar biriktirilmaydi; chat sababini aytadi.
+
+<Aside>
+Rasmlar uchun rasm qabul qiladigan model kerak. Tanlangan model qabul qilmasa, `/model` bilan boshqasini tanlang.
+</Aside>
+
+## Saqlangan chatlar
+
+Kamida bitta xabari bor har bir chat avtomatik ravishda `~/.the-atlas/sessions/` ga saqlanadi.
+
+| Buyruq | Nima qiladi |
+|---|---|
+| `/history` | Istalgan saqlangan chatni tanlab davom ettirish |
+| `/resume` | Shu papkada boshlangan oxirgi chatni davom ettirish |
+| `/export` | Chatni joriy papkaga Markdown qilib saqlash (`atlas-chat-<id>.md`) |
+| `/export notes.md` | O'zingiz tanlagan nom bilan saqlash |
+| `/clear` | Yangi chat boshlash (eskisi tarixda qoladi) |
+
+Terminaldan `atlas -c` joriy papkaning oxirgi chatini ochadi.
+
+## Status qatori
+
+Kiritish maydoni ostidagi qator quyidagilarni ko'rsatadi: repozitoriy, git branch, kontekst oynasi qanchalik to'lgani, taxminiy narx, commit qilinmagan `+qo'shilgan -o'chirilgan` qatorlar va javob bergan model hamda uning qolgan bepul so'rovlari. Batafsil: [Status qatori](/guides/status-line/).

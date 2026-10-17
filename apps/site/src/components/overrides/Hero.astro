@@ -1,0 +1,11 @@
+---
+import Default from "@astrojs/starlight/components/Hero.astro";
+import { toLocale } from "../../i18n/ui";
+import Landing from "../Landing.astro";
+
+// Locale home pages (uz root, ru, en) get the product landing; other heroes stay default.
+const route = Astro.locals.starlightRoute;
+const isHome = ["", "index", "ru", "en"].includes(route.id);
+---
+
+{isHome ? <Landing locale={toLocale(route.locale)} /> : <Default />}

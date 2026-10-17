@@ -1,0 +1,67 @@
+---
+title: "Terminallar"
+description: "Qo'llab-quvvatlanadigan terminallar, rang va Unicode zaxira rejimlari, ularni majburan yoqish."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Atlas terminalingiz nimani chiza olishini o'zi aniqlaydi va kerak bo'lsa soddalashtiradi: truecolor'dan 256 rangga, 16 rangga va rangsizga; Unicode belgilardan oddiy ASCII'ga.
+
+## Qo'llab-quvvatlanadigan terminallar
+
+| Terminal | Rang | Belgilar |
+|---|---|---|
+| Windows Terminal | truecolor | Unicode |
+| VS Code terminali | truecolor | Unicode |
+| iTerm2, WezTerm, Ghostty | truecolor | Unicode |
+| macOS Terminal.app | 256 rang | Unicode |
+| GNOME Terminal, Konsole, kitty, Alacritty va boshqa xterm'ga mos terminallar | 256 rang yoki truecolor | Unicode |
+| Eski Windows konsoli (alohida oynadagi cmd yoki Windows PowerShell 5.1) | Node aytganicha | ASCII |
+| Linux virtual konsoli (`TERM=linux`) | 16 rang | ASCII |
+| Pipe, fayl, CI loglari | yo'q | Unicode |
+
+Nima aniqlanganini ko'rish uchun `atlas doctor` ni ishga tushiring. Uning **Terminal** bo'limi terminal nomi, kengligi, rang chuqurligi, Unicode qo'llab-quvvatlanishi va tegishli o'zgaruvchilarni (`TERM`, `TERM_PROGRAM`, `WT_SESSION`) ko'rsatadi.
+
+## Logotip
+
+Katta harfli ATLAS logotipiga kamida 45 ustun kerak. Torroq oynada yoki `ATLAS_ASCII=1` bilan bir qatorli logotip chiqadi. Logotip harfma-harf yoziladi; darhol chiqarish uchun `ATLAS_NO_ANIM=1` ni o'rnating.
+
+## Majburiy sozlamalar
+
+| O'zgaruvchi | Ta'siri |
+|---|---|
+| `NO_COLOR=1` | Umuman rangsiz |
+| `FORCE_COLOR=0` | Rangsiz |
+| `FORCE_COLOR=1` | 16 rang |
+| `FORCE_COLOR=2` | 256 rang |
+| `FORCE_COLOR=3` | Truecolor |
+| `ATLAS_ASCII=1` | Oddiy ASCII belgilar va bir qatorli logotip |
+| `ATLAS_UNICODE=1` | Shriftga ishonish: aniqlash "yo'q" desa ham Unicode belgilardan foydalanish |
+| `ATLAS_NO_ANIM=1` | Yozilish animatsiyasisiz |
+| `ATLAS_KEEP_SCREEN=1` | Chiqqandan keyin chat ekranda qoladi (odatda ekran tozalanadi) |
+
+Bir marta ishga tushirish uchun misol:
+
+```bash
+ATLAS_ASCII=1 atlas
+```
+
+```powershell
+$env:ATLAS_ASCII = "1"; atlas
+```
+
+Barcha o'zgaruvchilar: [Muhit o'zgaruvchilari](/reference/environment-variables/).
+
+## Windows uchun maslahat
+
+<Aside type="tip">
+Windows'da to'liq rang, ikonkalar va [status qatori](/guides/status-line/) uchun Windows Terminal'ni o'rnating:
+
+```powershell
+winget install Microsoft.WindowsTerminal
+```
+
+`atlas doctor` eski konsolni topsa ogohlantiradi. [Agentlar ishga tushirgichi](/guides/agents/) ham agentlarni yangi oynada ochish uchun Windows Terminal'dan foydalanadi.
+</Aside>

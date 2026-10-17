@@ -1,0 +1,67 @@
+---
+title: "Terminals"
+description: "Supported terminals, colour and Unicode fallbacks, and how to force them."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Atlas detects what your terminal can draw and degrades on its own: truecolor to 256 colours to 16 colours to none, and Unicode glyphs to plain ASCII.
+
+## Supported terminals
+
+| Terminal | Colour | Glyphs |
+|---|---|---|
+| Windows Terminal | truecolor | Unicode |
+| VS Code terminal | truecolor | Unicode |
+| iTerm2, WezTerm, Ghostty | truecolor | Unicode |
+| macOS Terminal.app | 256 colours | Unicode |
+| GNOME Terminal, Konsole, kitty, Alacritty and other xterm-compatible terminals | 256 colours or truecolor | Unicode |
+| Legacy Windows console (cmd or Windows PowerShell 5.1 in its own window) | as reported by Node | ASCII |
+| Linux virtual console (`TERM=linux`) | 16 colours | ASCII |
+| Pipes, files, CI logs | none | Unicode |
+
+Run `atlas doctor` to see what was detected. Its **Terminal** section prints the terminal name, width, colour depth, Unicode support and the relevant variables (`TERM`, `TERM_PROGRAM`, `WT_SESSION`).
+
+## The logo
+
+The block-letter ATLAS logo needs at least 45 columns. In a narrower window, or with `ATLAS_ASCII=1`, a one-line logo is printed instead. The logo is typed in letter by letter; set `ATLAS_NO_ANIM=1` to print it at once.
+
+## Overrides
+
+| Variable | Effect |
+|---|---|
+| `NO_COLOR=1` | No colours at all |
+| `FORCE_COLOR=0` | No colours |
+| `FORCE_COLOR=1` | 16 colours |
+| `FORCE_COLOR=2` | 256 colours |
+| `FORCE_COLOR=3` | Truecolor |
+| `ATLAS_ASCII=1` | Plain ASCII glyphs and the one-line logo |
+| `ATLAS_UNICODE=1` | Trust the font: use Unicode glyphs even where detection says no |
+| `ATLAS_NO_ANIM=1` | No typing animation |
+| `ATLAS_KEEP_SCREEN=1` | Keep the chat on screen after you quit (by default the screen is cleared) |
+
+Example, for one run:
+
+```bash
+ATLAS_ASCII=1 atlas
+```
+
+```powershell
+$env:ATLAS_ASCII = "1"; atlas
+```
+
+All variables: [Environment variables](/en/reference/environment-variables/).
+
+## Windows tip
+
+<Aside type="tip">
+On Windows, install Windows Terminal for full colour, icons and the [status line](/en/guides/status-line/):
+
+```powershell
+winget install Microsoft.WindowsTerminal
+```
+
+`atlas doctor` warns when it finds the legacy console. Windows Terminal is also what the [agents launcher](/en/guides/agents/) uses to open agents in a new window.
+</Aside>

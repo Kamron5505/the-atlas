@@ -14,8 +14,9 @@ export interface WindowLaunch {
   install?: boolean;
 }
 
-const psq = (s: string) => `'${s.replace(/'/g, "''")}'`;
-const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
+// PowerShell also ends '…' strings on the Unicode quotes U+2018..U+201B; double them all.
+export const psq = (s: string) => `'${s.replace(/['‘’‚‛]/g, "$&$&")}'`;
+export const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 function bashPath(): string | undefined {
@@ -117,13 +118,16 @@ export async function openInNewWindow(o: WindowLaunch): Promise<boolean> {
     writeFileSync(file, `﻿${buildPs1(o)}`, "utf8");
     const ps = ["powershell.exe", "-NoLogo", "-NoExit", "-ExecutionPolicy", "Bypass", "-File", file];
     if (which("wt", false) && (await detached("wt.exe", ["-w", "new", "--title", title, "-d", cwd, ...ps]))) return true;
-    return detached("cmd.exe", [`/d /c start "${title}" ${ps.map((p) => (/\s/.test(p) ? `"${p}"` : p)).join(" ")}`], { verbatim: true });
+    // cmd.exe parses this line: keep the title free of quotes/metachars and quote every path.
+    const safeTitle = title.replace(/["%^&|<>]/g, "");
+    return detached("cmd.exe", [`/d /c start "${safeTitle}" ${ps.map((p) => (/[\s&|<>^()%!,;=]/.test(p) ? `"${p}"` : p)).join(" ")}`], { verbatim: true });
   }
 
   const file = join(dir, `${slug(o.agent.name)}.sh`);
   writeFileSync(file, buildSh(o), { mode: 0o755 });
   if (process.platform === "darwin") {
-    const script = `tell application "Terminal" to do script "bash ${file.replace(/"/g, '\\"')}"`;
+    // Shell-quote the path, then escape it for the AppleScript string literal.
+    const script = `tell application "Terminal" to do script "bash ${shq(file).replace(/[\\"]/g, "\\$&")}"`;
     return detached("osascript", ["-e", script, "-e", 'tell application "Terminal" to activate']);
   }
   for (const [term, ...pre] of [

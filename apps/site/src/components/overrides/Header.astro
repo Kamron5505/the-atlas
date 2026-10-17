@@ -1,0 +1,99 @@
+---
+import LanguageSelect from "@astrojs/starlight/components/LanguageSelect.astro";
+import Search from "@astrojs/starlight/components/Search.astro";
+import SiteTitle from "@astrojs/starlight/components/SiteTitle.astro";
+import SocialIcons from "@astrojs/starlight/components/SocialIcons.astro";
+import ThemeSelect from "@astrojs/starlight/components/ThemeSelect.astro";
+import { DICT, NAV, href, toLocale } from "../../i18n/ui";
+
+const route = Astro.locals.starlightRoute;
+const locale = toLocale(route.locale);
+const L = DICT[locale];
+// First path segment after the locale prefix, e.g. "guides".
+const section = route.id.replace(/^(ru|en)\//, "").split("/")[0];
+---
+
+<div class="header">
+  <div class="title-wrapper sl-flex">
+    <SiteTitle />
+  </div>
+  <nav class="top-nav" aria-label={L.navLabel}>
+    {
+      NAV.map((item) => (
+        <a
+          href={href(locale, item.slug)}
+          aria-current={(item.match as readonly string[]).includes(section ?? "") ? "page" : undefined}
+        >
+          {L.nav[item.key]}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="sl-flex print:hidden search">
+    <Search />
+  </div>
+  <div class="sl-hidden md:sl-flex print:hidden right-group">
+    <div class="sl-flex social-icons">
+      <SocialIcons />
+    </div>
+    <ThemeSelect />
+    <LanguageSelect />
+  </div>
+</div>
+
+<style>
+  .header {
+    display: flex;
+    gap: var(--sl-nav-gap);
+    align-items: center;
+    height: 100%;
+  }
+  .title-wrapper {
+    overflow: clip;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+  .top-nav {
+    display: none;
+    gap: 0.25rem;
+    align-items: center;
+    margin-inline-start: 1rem;
+  }
+  .top-nav a {
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.375rem 0.625rem;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: color 0.15s ease, background-color 0.15s ease;
+  }
+  .top-nav a:hover {
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-6);
+  }
+  .top-nav a[aria-current="page"] {
+    color: var(--sl-color-text-accent);
+  }
+  .search {
+    margin-inline-start: auto;
+  }
+  .right-group,
+  .social-icons {
+    gap: 1rem;
+    align-items: center;
+  }
+  .social-icons::after {
+    content: "";
+    height: 2rem;
+    border-inline-end: 1px solid var(--sl-color-gray-5);
+  }
+  @media (min-width: 72rem) {
+    .top-nav {
+      display: flex;
+    }
+  }
+</style>

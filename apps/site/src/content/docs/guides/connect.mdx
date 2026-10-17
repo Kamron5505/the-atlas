@@ -1,0 +1,73 @@
+---
+title: "Provayderlarni ulash"
+description: "OpenRouter'ni bir bosishda ulang, boshqa provayderlar uchun API kalit qo'shing yoki lokal modellardan foydalaning."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Ulash ustasi
+
+```bash
+atlas connect            # pick from a list
+atlas connect groq       # go straight to one provider
+```
+
+Chatda `/connect` yoki `/connect groq` dan foydalaning.
+
+- **OpenRouter**: bir bosishda kirish. Brauzer OpenRouter'ni ochadi, siz ruxsat berasiz va shaxsiy kalitingiz terminalga o'zi qaytadi. Kalitni qo'lda qo'yish uchun `k` ni bosing.
+- **Boshqa bulutli provayderlar**: brauzer provayderning kalit sahifasini ochadi. Kalit yarating, qo'ying, Enter bosing. The Atlas kalitni saqlashdan oldin tekshiradi.
+- **Ollama, OmniRoute**: lokal, kalit kerak emas. The Atlas server ishlayotganini tekshiradi.
+
+## Provayderlar
+
+| ID | Provayder | Tarif | Kalit olish | Muhit o'zgaruvchisi |
+|---|---|---|---|---|
+| `openrouter` | OpenRouter | bepul | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
+| `gemini` | Google Gemini | bepul | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
+| `groq` | Groq | bepul | [console.groq.com/keys](https://console.groq.com/keys) | `GROQ_API_KEY` |
+| `cerebras` | Cerebras | bepul | [cloud.cerebras.ai](https://cloud.cerebras.ai) | `CEREBRAS_API_KEY` |
+| `mistral` | Mistral | bepul | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) | `MISTRAL_API_KEY` |
+| `github` | GitHub Models | bepul | [github.com/settings/tokens](https://github.com/settings/tokens) | `GITHUB_TOKEN` |
+| `nvidia` | NVIDIA NIM | bepul | [build.nvidia.com](https://build.nvidia.com) | `NVIDIA_API_KEY` |
+| `sambanova` | SambaNova | bepul | [cloud.sambanova.ai/apis](https://cloud.sambanova.ai/apis) | `SAMBANOVA_API_KEY` |
+| `omniroute` | OmniRoute | lokal | [OmniRoute GitHub'da](https://github.com/diegosouzapw/OmniRoute) | `OMNIROUTE_API_KEY` (ixtiyoriy) |
+| `ollama` | Ollama | lokal | [ollama.com/download](https://ollama.com/download) | yo'q |
+| `openai` | OpenAI | pullik | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
+| `anthropic` | Anthropic Claude | pullik | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` |
+
+Standart modellar va bazaviy URL'lar: [Provayderlar ma'lumotnomasi](/reference/providers/).
+
+## Kalitlarni terminaldan boshqarish
+
+```bash
+atlas keys add groq              # asks for the key, typed hidden
+atlas keys add groq gsk_...      # or pass it (it stays in your shell history)
+atlas keys list                  # stored keys, masked
+atlas keys rm groq               # remove a key
+atlas providers                  # every provider: ready, no key, or local
+```
+
+`atlas doctor` har bir ulangan provayderni tekshirib, javob vaqti va modellar sonini ko'rsatadi.
+
+## Muhit o'zgaruvchilari
+
+Agar provayder uchun kalit saqlanmagan bo'lsa, The Atlas yuqoridagi jadvaldagi o'zgaruvchini o'qiydi. Saqlangan kalit doim ustun turadi.
+
+```bash
+export GROQ_API_KEY=gsk_...
+atlas
+```
+
+## Lokal modellar
+
+**Ollama**: uni [ollama.com](https://ollama.com/download) dan o'rnating, model yuklab oling (`ollama pull llama3.2`) va ishlab turgan holda qoldiring. The Atlas `http://localhost:11434/v1` ga ulanadi.
+
+**OmniRoute**: ko'plab akkauntlar va bepul tariflarni birlashtiradigan lokal shlyuz. `atlas omniroute` ni ishga tushiring. Batafsil: [OmniRoute](/guides/omniroute/).
+
+Auto rejimda ishlamayotgan lokal server jimgina o'tkazib yuboriladi.
+
+<Aside type="caution">
+Kalitlar `~/.the-atlas/config.json` da oddiy matn ko'rinishida saqlanadi (macOS va Linux'da fayl huquqi 600). The Atlas har bir kalitni faqat o'z provayderiga yuboradi. Faylni hech kimga bermang, bepul tarif kalitlarini sotmang va ulashmang.
+</Aside>

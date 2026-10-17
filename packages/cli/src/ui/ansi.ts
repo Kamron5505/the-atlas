@@ -1,13 +1,13 @@
+import { bold, hexToRgb, paint } from "./term.js";
 import { C, TAG_COLOR, tagText, type Tag } from "./theme.js";
 
-const enabled = !process.env.NO_COLOR && process.stdout.isTTY !== false;
-
+/** Colour that degrades truecolor → 256 → 16 → none per terminal (see term.ts). */
 function hex(color: string) {
-  const n = Number.parseInt(color.slice(1), 16);
-  return (s: string) => (enabled ? `\x1b[38;2;${(n >> 16) & 255};${(n >> 8) & 255};${n & 255}m${s}\x1b[39m` : s);
+  const rgb = hexToRgb(color);
+  return (s: string) => paint(rgb, s);
 }
 
-/** Truecolor helpers for plain (non-Ink) output, same palette as the TUI. */
+/** Colour helpers for plain (non-Ink) output, same palette as the TUI. */
 export const a = {
   neon: hex(C.neon),
   glow: hex(C.glow),
@@ -18,6 +18,6 @@ export const a = {
   ok: hex(C.ok),
   warn: hex(C.warn),
   err: hex(C.err),
-  bold: (s: string) => (enabled ? `\x1b[1m${s}\x1b[22m` : s),
+  bold: (s: string) => bold(s),
   tag: (t: Tag) => hex(TAG_COLOR[t])(tagText(t)),
 };

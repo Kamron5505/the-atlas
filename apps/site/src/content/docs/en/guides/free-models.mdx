@@ -1,0 +1,73 @@
+---
+title: "Free models and auto-switch"
+description: "How auto mode picks a free model, falls back when one fails, and counts your free requests."
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+By default The Atlas runs in **auto** mode: it uses free models from the AIs you connected and switches to another one when a model is busy or out of quota.
+
+## OpenRouter `openrouter/free`
+
+OpenRouter's default model in The Atlas is `openrouter/free`, a router that always points at a model that is currently free. One OpenRouter key gives you many free models; list them with:
+
+```bash
+atlas models openrouter --free
+```
+
+## Fallback order
+
+In auto mode providers are tried in this order, skipping any without a key:
+
+1. `openrouter`
+2. `gemini`
+3. `groq`
+4. `cerebras`
+5. `mistral`
+6. `github`
+7. `nvidia`
+8. `sambanova`
+9. `omniroute` (skipped silently if it is not running)
+10. `ollama` (skipped silently if it is not running)
+11. Paid providers you connected (`openai`, `anthropic`)
+
+On each provider The Atlas first tries the selected or default model. On OpenRouter, if that model answers 404, 429, 502 or 503, it tries up to two more free models before moving to the next provider.
+
+Fallback happens **only before the first word arrives**, so one answer never mixes two models. Each switch is shown as a dim line in the chat.
+
+Change the order by editing `order` in `~/.the-atlas/config.json`. `atlas omniroute` moves OmniRoute to the front.
+
+## Auto or a fixed model
+
+| You want | Do |
+|---|---|
+| Automatic fallback | `/provider auto`, or `atlas use auto` |
+| One provider, its default model | `/provider groq`, or `atlas use groq` |
+| One exact model | `/model groq/llama-3.3-70b-versatile`, or `atlas use groq llama-3.3-70b-versatile` |
+| Pick from a list | `/model` |
+
+With a fixed provider there is no switching to other providers.
+
+## Free request counter
+
+The status line shows how many requests are left on the provider that answered, for example `980/1000` or `≈42/50`.
+
+- Numbers without `≈` come from the provider's rate-limit headers. `/min` means a per-minute limit.
+- Numbers with `≈` are a local estimate for providers that send no headers: OpenRouter 50, Gemini 250 and GitHub Models 150 requests per day, counted by The Atlas.
+
+When 15% or less of a daily limit is left, the chat warns once. Counters are stored in `~/.the-atlas/limits.json` and reset each day (UTC).
+
+<Aside>
+The estimates are approximate. Real limits depend on your account; for example OpenRouter raises its free daily limit for accounts with credits.
+</Aside>
+
+## What a 429 means
+
+HTTP **429** means "too many requests": the model is busy upstream, or you used up the free quota for now. The Atlas treats 429, 402 and errors that mention quota, rate limit or credits as a limit.
+
+- In auto mode it moves on to the next model or provider by itself.
+- When every option is limited, a menu asks what to do next: switch to another connected AI, go back to auto, choose another model, or connect another AI. Your question is asked again on the AI you pick.
+
+The cheapest fix is to connect a second free provider with `/connect`. Groq, Gemini and Cerebras all have free tiers.

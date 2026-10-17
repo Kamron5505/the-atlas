@@ -1,0 +1,89 @@
+---
+title: "MCP serverlar"
+description: "Model Context Protocol serverlari orqali agent rejimiga tashqi vositalar qo'shing."
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+MCP (Model Context Protocol) serverlari [agent rejimiga](/guides/agent-mode/) vositalar qo'shadi: brauzer, GitHub, ma'lumotlar bazalari, Google Drive va boshqalar. Agent rejimi boshlanganda The Atlas serverlaringizga ulanadi va ularning vositalarini AI'ga taklif qiladi.
+
+## Tayyor shablonlar
+
+```bash
+atlas mcp add filesystem
+atlas mcp add github
+```
+
+| Shablon | Server | Nima so'raydi |
+|---|---|---|
+| `filesystem` | `@modelcontextprotocol/server-filesystem`, joriy papka bilan cheklangan | |
+| `github` | GitHub masofaviy serveri (`api.githubcopilot.com/mcp/`) | GitHub tokeni |
+| `browser` | `@playwright/mcp` (Playwright) | |
+| `memory` | `@modelcontextprotocol/server-memory` | |
+| `sequential-thinking` | `@modelcontextprotocol/server-sequential-thinking` | |
+| `sqlite` | `mcp-server-sqlite-npx` | Ma'lumotlar bazasi fayli yo'li |
+| `postgres` | `@henkey/postgres-mcp-server` | Ulanish satri |
+| `gdrive` | `@piotr-agier/google-drive-mcp` | Uning `auth` buyrug'ini bir marta ishga tushiring (qo'shilgandan keyin ko'rsatiladi) |
+
+Lokal shablonlar `npx -y` orqali ishlaydi, shuning uchun Node.js PATH'da bo'lishi kerak. Maxfiy qiymatlar yashirin kiritiladi.
+
+## O'z serveringizni qo'shish
+
+```bash
+# Local server: everything after -- is the command
+atlas mcp add mydb -- npx -y some-mcp-server --flag
+atlas mcp add mydb -e API_KEY=abc -e REGION=eu -- node server.js
+atlas mcp add mydb --cwd ./tools -- python server.py
+
+# Remote server (Streamable HTTP, with SSE fallback)
+atlas mcp add docs --url https://example.com/mcp
+atlas mcp add api --url https://example.com/mcp -H "Authorization=Bearer abc"
+```
+
+Sarlavhalar va env juftliklari `KEY=VALUE` ko'rinishida; sarlavhalar `Key: Value` ni ham qabul qiladi. Server nomlarida kichik harflar, raqamlar, `_` va `-` ishlatiladi (32 belgigacha).
+
+## Serverlarni boshqarish
+
+```bash
+atlas mcp list              # servers, status and tool count
+atlas mcp tools github      # connect and list a server's tools
+atlas mcp disable github    # keep it, but do not start it
+atlas mcp enable github
+atlas mcp remove github     # or: atlas mcp rm github
+```
+
+Chatda `/mcp` har bir serverning holati va vositalarini ko'rsatadi.
+
+Vosita nomlari `mcp__<server>__<tool>` ko'rinishida chiqadi. Env o'zgaruvchilari va sarlavhalar qiymatlari hech qachon chiqarilmaydi; URL va argumentlardagi tokenlar yashiriladi.
+
+## Claude Desktop'dan import qilish
+
+```bash
+atlas mcp import claude
+```
+
+Claude Desktop'ning `claude_desktop_config.json` faylini o'qiydi, topilgan serverlarni ko'rsatadi va qo'shishdan oldin so'raydi. Mavjud nomlar o'tkazib yuboriladi. Claude Desktop fayli hech qachon o'zgartirilmaydi.
+
+## Ruxsat
+
+<Aside type="caution">
+**Har bir MCP vosita chaqiruvi ruxsatingizni so'raydi**, chunki The Atlas tashqi vosita nima qilishini bila olmaydi. Ha bilan tasdiqlang yoki agent ishining qolgan qismi uchun shu vositaga ruxsat bering.
+</Aside>
+
+## Sozlamalar fayli
+
+Serverlar `~/.the-atlas/mcp.json` da, Claude Desktop'dagi kabi `mcpServers` formatida saqlanadi:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"] },
+    "docs": { "url": "https://example.com/mcp", "headers": { "Authorization": "Bearer ..." } },
+    "old": { "command": "node", "args": ["server.js"], "disabled": true }
+  }
+}
+```
+
+Lokal serverlar, agar `cwd` berilmagan bo'lsa, loyiha papkasida ishga tushadi. Ulanish 15 soniyadan, vosita chaqiruvi 2 daqiqadan keyin vaqt chegarasiga yetadi. Buzilgan `mcp.json` haqida xabar beriladi, lekin chat to'xtamaydi.

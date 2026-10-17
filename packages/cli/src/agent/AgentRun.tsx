@@ -7,7 +7,7 @@ import { Select, type SelectItem } from "../ui/Select.js";
 import { C, I, SPARK } from "../ui/theme.js";
 import type { AgentDict } from "./i18n.js";
 import { runAgent, type AgentEvent, type AgentResult } from "./loop.js";
-import { builtinTools } from "./tools.js";
+import { builtinTools, visible } from "./tools.js";
 import type { AgentTool, ApprovalAnswer, ApprovalRequest, ToolResult } from "./types.js";
 
 type Row =
@@ -20,7 +20,7 @@ let rowId = 0;
 /** Short target of a tool call for the transcript (path, command or pattern). */
 export function toolTarget(args: Record<string, unknown>): string {
   const v = args.path ?? args.command ?? args.pattern ?? args.url ?? args.query;
-  const s = typeof v === "string" ? v : "";
+  const s = typeof v === "string" ? visible(v).replace(/\n/g, " ") : "";
   return s.length > 70 ? `${s.slice(0, 69)}…` : s;
 }
 
@@ -36,7 +36,7 @@ export function toolLine(L: AgentDict, tool: AgentTool, args: Record<string, unk
   const verb = toolVerb(L, tool);
   if (declined) return `${verb} ${toolTarget(args)} · ${L.declined}`;
   const detail = result?.summary ?? (result ? (result.output.split("\n")[0] ?? "").slice(0, 80) : toolTarget(args));
-  return `${verb} ${detail}`.trim();
+  return visible(`${verb} ${detail}`.trim()).replace(/\n/g, " ");
 }
 
 function useTicker(active: boolean, ms = 120): number {
@@ -49,14 +49,14 @@ function useTicker(active: boolean, ms = 120): number {
   return n;
 }
 
-/** Diff/command preview with +/- colouring. */
+/** Diff/command preview with +/- colouring. Wraps, never truncates: a long command must not hide its tail. */
 function Preview({ text }: { text: string }) {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor={C.faint} paddingX={1}>
       {text.split("\n").map((l, i) => (
         <Text
           key={i}
-          wrap="truncate"
+          wrap="wrap"
           color={i === 0 ? C.text : l.startsWith("+") ? C.ok : l.startsWith("-") ? C.err : l === "@@" ? C.faint : C.dim}
           bold={i === 0}
         >

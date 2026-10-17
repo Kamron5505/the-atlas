@@ -1,0 +1,67 @@
+---
+title: "Tez boshlash"
+description: "Bir bosishda bepul AI ulang va birinchi savolingizni bering."
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. **The Atlas'ni ishga tushiring** (istalgan papkada):
+
+   ```bash
+   atlas
+   ```
+
+   ATLAS logotipi harfma-harf yoziladi, keyin chat ochiladi. Interfeys o'zbek tilida ochiladi; 4-qadamda tilni almashtirish mumkin.
+
+2. **AI ulang.** Birinchi ishga tushirishda hech qanday AI ulanmagan, shuning uchun ulash oynasi o'zi ochiladi. Keyinchalik uni `/connect` bilan ochasiz.
+
+   **OpenRouter** ni tanlang. Brauzerda OpenRouter'ga kirish sahifasi ochiladi. Kiring va ruxsat bering; kalit terminalga o'zi qaytadi va tekshiriladi. Kalitni qo'lda qo'yish uchun `k`, bekor qilish uchun `Esc` ni bosing.
+
+   Boshqa provayderlar brauzerda kalit sahifasini ochadi; kalitni qo'ying va Enter bosing. Batafsil: [Provayderlarni ulash](/guides/connect/).
+
+3. **Savol bering.** Savolni yozing va Enter bosing:
+
+   ```text
+   › explain what a monorepo is in two sentences
+   ```
+
+   Javob oqim bilan chiqadi. Javob kelayotganda `Esc` uni to'xtatadi. Kiritish maydoni ostidagi status qatori qaysi model javob berganini va qolgan bepul so'rovlar sonini ko'rsatadi.
+
+4. **Interfeys tilini almashtiring** (`uz`, `ru` yoki `en`):
+
+   ```text
+   /lang en
+   ```
+
+   Yoki terminaldan: `atlas lang en`. AI esa siz yozgan tilda javob beradi.
+
+</Steps>
+
+## Keyin nimani sinash mumkin
+
+| Yozing | Nima qiladi |
+|---|---|
+| `/` | Barcha slash buyruqlarni ko'rsatadi |
+| `/model` | Barcha ulangan AI'lardan model tanlash |
+| `@src/app.ts what does this do?` | Savolga fayl biriktirish |
+| `/compare` | Bir vaqtda 2 yoki 3 ta AI'dan so'rash |
+| `/agent add a README` | AI fayllarni tahrirlaydi va buyruqlarni ishga tushiradi, sizning ruxsatingiz bilan |
+| `/agents` | 47 ta AI CLI'dan birini yangi oynada ochish |
+| `ctrl+r` | Yozish o'rniga gapiring |
+
+## Chat interfeysisiz
+
+```bash
+atlas ask "what is the capital of Uzbekistan?"
+git diff | atlas ask "review this change"
+```
+
+`atlas ask` javobni stdout'ga chiqaradi; pipe orqali kelgan matn savolga qo'shiladi.
+
+<Aside>
+Kalitlar faqat kompyuteringizda, `~/.the-atlas/config.json` faylida saqlanadi. The Atlas har bir kalitni faqat o'z provayderiga yuboradi.
+</Aside>

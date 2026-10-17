@@ -1,0 +1,73 @@
+---
+import { Code, TabItem, Tabs } from "@astrojs/starlight/components";
+import { NODE_URL, type Dict } from "../../i18n/ui";
+
+interface Props {
+  L: Dict;
+}
+const { L } = Astro.props;
+const cmd = "npm i -g the-atlas\natlas";
+---
+
+<div class="install">
+  <p class="label" id="install-label">{L.installLabel}</p>
+  {/* Pick the visitor's OS once; Starlight's synced tabs remember later choices. */}
+  <script is:inline>
+    try {
+      const k = "starlight-synced-tabs__os";
+      if (!localStorage.getItem(k)) {
+        const ua = navigator.userAgent;
+        localStorage.setItem(k, /Mac|iPhone|iPad/.test(ua) ? "macOS" : /Linux|Android|CrOS/.test(ua) ? "Linux" : "Windows");
+      }
+    } catch {}
+  </script>
+  <Tabs syncKey="os">
+    <TabItem label="Windows" icon="seti:windows">
+      <Code code={cmd} lang="powershell" frame="terminal" title="PowerShell" />
+    </TabItem>
+    <TabItem label="macOS" icon="apple">
+      <Code code={cmd} lang="bash" frame="terminal" title="Terminal" />
+    </TabItem>
+    <TabItem label="Linux" icon="linux">
+      <Code code={cmd} lang="bash" frame="terminal" title="bash" />
+    </TabItem>
+  </Tabs>
+  <p class="note">
+    {L.node}
+    <a href={NODE_URL} rel="noopener">{L.nodeLink}</a>
+  </p>
+</div>
+
+<style>
+  .install {
+    min-width: 0;
+  }
+  .label {
+    margin: 0 0 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--sl-color-gray-3);
+  }
+  .install :global(starlight-tabs .tablist-wrapper) {
+    margin-bottom: 0.75rem;
+  }
+  .install :global(.expressive-code) {
+    margin: 0;
+  }
+  /* Copy button always visible here, not only on hover. */
+  .install :global(.expressive-code .copy button) {
+    opacity: 1;
+  }
+  .install :global(.expressive-code pre) {
+    font-size: 0.95rem;
+  }
+  .note {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--sl-color-gray-3);
+  }
+  .note a {
+    color: var(--sl-color-text-accent);
+    margin-inline-start: 0.25rem;
+  }
+</style>

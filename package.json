@@ -4,14 +4,19 @@
   "type": "module",
   "workspaces": [
     "packages/core",
-    "packages/cli"
+    "packages/cli",
+    "apps/site"
   ],
   "scripts": {
     "build": "npm run build -w the-atlas",
     "typecheck": "tsc -p packages/core && tsc -p packages/cli",
     "test": "vitest run",
     "dev": "tsx packages/cli/src/index.tsx",
-    "check:agents": "node scripts/check-agents.mjs"
+    "check:agents": "node scripts/check-agents.mjs",
+    "site:dev": "npm run dev -w @the-atlas/site",
+    "site:build": "npm run build -w @the-atlas/site",
+    "site:agents": "node apps/site/scripts/gen-agents.mjs && node apps/site/scripts/gen-agents-uz.mjs && node apps/site/scripts/gen-agents-ru.mjs",
+    "site:demos": "tsx --tsconfig packages/cli/tsconfig.json packages/cli/scripts/capture-demos.tsx"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

@@ -1,0 +1,65 @@
+---
+title: "Status qatori"
+description: "Chatdagi The Atlas status qatori va uni Claude Code'ga o'rnatish."
+sidebar:
+  order: 9
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Ish paytida muhim narsalarni ko'rsatadigan bitta qator:
+
+```text
+the-atlas | 🌿 (main) | 🟢 ████░░░░░░░░░░░░░░░░ 12% | $0.00 | +10 -2 | 🤖 groq/llama-3.3-70b-versatile 980/1000
+```
+
+| Qism | Ma'nosi |
+|---|---|
+| `the-atlas` | Repozitoriy (yoki papka) nomi |
+| `(main)` | Joriy git branch |
+| Shkala va `12%` | Modelning kontekst oynasi qanchalik to'lgani; yashildan qizilgacha |
+| `$0.00` | Sessiyaning taxminiy narxi (bepul modellar 0 turadi) |
+| `+10 -2` | Commit qilinmagan qo'shilgan va o'chirilgan qatorlar (`git diff HEAD`) |
+| Model | Oxirgi javob bergan model va uning qolgan bepul so'rovlari |
+
+Emoji chizib bo'lmaydigan joyda matnli belgilar ishlatiladi: `br:`, `OK` / `MID` / `HOT` / `MAX`, `ai:`, shkala uchun esa `#` `.`.
+
+## Atlas chatida
+
+Status qatori doim yoqilgan, kiritish maydoni ostida turadi. `/` yoki `@` yozayotganingizda uning o'rnida menyu chiqadi.
+
+## Claude Code'da
+
+Claude Code ekranining pastida ham xuddi shu qatorni ko'rsatishi mumkin:
+
+```bash
+atlas statusline --install claude
+```
+
+The Atlas o'zgarishni ko'rsatadi, tasdiq so'raydi (`-y` buni o'tkazib yuboradi), sozlamalar faylining zaxira nusxasini oladi va quyidagini yozadi:
+
+```json
+{
+  "statusLine": { "type": "command", "command": "atlas statusline", "padding": 0 }
+}
+```
+
+`~/.claude/settings.json` (yoki `$CLAUDE_CONFIG_DIR/settings.json`) fayliga. Ko'rish uchun Claude Code'ni qayta ishga tushiring. Agar oldin boshqa status qatori bo'lgan bo'lsa, The Atlas uni almashtirishdan oldin ko'rsatadi; zaxira fayl uni saqlab qoladi.
+
+Claude Code'da qator Claude modeli, sessiya narxi, o'zgargan qatorlar va kontekst bandligini ko'rsatadi; hammasi Claude Code yuboradigan JSON'dan olinadi.
+
+<Aside>
+Status qatori API'si faqat Claude Code'da bor, shuning uchun `--install` faqat `claude` qiymatini qabul qiladi.
+</Aside>
+
+## O'chirish
+
+`~/.claude/settings.json` dan `statusLine` yozuvini o'chiring yoki yonidagi zaxira nusxani (`settings.json.atlas-backup-<date>`) tiklang.
+
+## Qo'lda sinab ko'rish
+
+`atlas statusline` Claude Code JSON'ini stdin'dan o'qiydi va bitta qator chiqaradi:
+
+```bash
+echo '{"model":{"display_name":"Opus"},"cost":{"total_cost_usd":0.42}}' | atlas statusline
+```

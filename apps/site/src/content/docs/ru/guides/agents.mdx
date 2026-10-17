@@ -1,0 +1,88 @@
+---
+title: "Запуск ИИ-агентов"
+description: "Находите, устанавливайте и открывайте 47 AI CLI для кода, при желании на бесплатных моделях Atlas."
+sidebar:
+  order: 8
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+В The Atlas есть каталог из 47 ИИ-агентов для командной строки: Claude Code, Codex, Gemini CLI, Aider, OpenCode, Goose и другие. Полный список: [Каталог агентов](/ru/extensions/agents/).
+
+## Окно выбора
+
+```bash
+atlas agents               # интерактивный выбор
+atlas agents --free        # только агенты с бесплатным тарифом
+atlas agents --installed   # только установленные агенты
+atlas agents --list        # напечатать каталог и выйти
+```
+
+В чате используйте `/agents`.
+
+| Клавиша | Действие |
+|---|---|
+| Ввод текста | Фильтр по имени, команде, категории или описанию |
+| `↑` `↓`, `PgUp` `PgDn` | Перемещение |
+| `Tab` | Вкл/выкл «запуск на бесплатных моделях Atlas» |
+| `Enter` | Открыть агента |
+| `Esc` | Закрыть |
+
+Сначала идёт агент, которого вы открывали последним, затем установленные агенты, затем те, которыми вы пользуетесь чаще всего.
+
+## Новые окна
+
+`Enter` открывает агента в **новом окне терминала**, поэтому чат Atlas остаётся на месте:
+
+- **Windows**: Windows Terminal, если установлен, иначе новое окно PowerShell.
+- **macOS**: Terminal.app.
+- **Linux**: первый найденный из `x-terminal-emulator`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `alacritty`, `xterm`.
+
+Если агент не установлен, The Atlas показывает команду установки и сначала спрашивает. Установщики, которые скачивают и запускают удалённый скрипт, помечены. Установка идёт в новом окне.
+
+## Запуск на бесплатных моделях Atlas
+
+Нажмите `Tab` в окне выбора или передайте `--free`. The Atlas запускает в фоне [локальный прокси](/ru/guides/serve/) на порту 4141 и запускает агента с:
+
+```bash
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_BASE=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=<your atlas serve token>
+```
+
+Aider, Open Interpreter и Shell GPT так работают без настройки. Другие OpenAI-совместимые агенты тоже читают эти переменные; если агент спрашивает модель, выберите `auto`.
+
+## Из оболочки
+
+```bash
+atlas run aider                    # запустить здесь; установит, если нет
+atlas run aider --free             # на бесплатных моделях Atlas
+atlas run codex --window           # в новом окне терминала
+atlas run aider -y                 # установить без вопросов
+atlas run aider -- --help          # передать аргументы агенту
+atlas install gemini               # только установить
+```
+
+`atlas run` принимает имя агента или его команду. При первом запуске агента The Atlas печатает, как в нём входить (вход через браузер, API-ключ, подписка).
+
+## Заметки для Windows
+
+- Команды установки выполняются в PowerShell. Если у агента есть установщик для winget или PowerShell, используется он.
+- Агентам, чей установщик это bash-скрипт, нужен Git Bash ([Git for Windows](https://git-scm.com/downloads)) или WSL.
+- У некоторых агентов нет сборки для Windows; в каталоге они помечены **Только WSL**.
+- Если агент установился, но не находится, откройте новый терминал, чтобы обновился PATH, затем запустите `atlas doctor`.
+
+## Добавить своих агентов
+
+Создайте `~/.the-atlas/agents.conf`, по одному агенту в строке, в том же формате, что и встроенный каталог:
+
+```text
+# NAME|BINARY|COMMAND|INSTALL|DESCRIPTION|CATEGORY|AUTH|URL|WIN_INSTALL
+My Agent|myagent|myagent|npm install -g my-agent@latest|My own agent|Coding|API key|https://example.com|-
+```
+
+В `BINARY` можно указать варианты (`a,b`). `WIN_INSTALL` это команда PowerShell или winget для Windows; `-` значит только WSL. Ваши агенты добавляются в список; агент с тем же именем, что у встроенного, игнорируется.
+
+<Aside type="caution">
+При установке свои агенты помечаются как не проверенные The Atlas. Проверьте команду установки, прежде чем подтвердить.
+</Aside>

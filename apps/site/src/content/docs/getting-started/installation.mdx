@@ -1,0 +1,155 @@
+---
+title: "O'rnatish"
+description: "The Atlas CLI'ni Windows, macOS yoki Linux'ga npm orqali o'rnating."
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, Aside, Steps } from '@astrojs/starlight/components';
+
+The Atlas bu npm paketi. Unga **Node.js 22 yoki undan yangi** versiya kerak.
+
+## O'rnatish
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+<Steps>
+
+1. Node.js 22+ ni o'rnating (`node --version` 22 yoki undan yuqorini ko'rsatsa, bu qadamni o'tkazib yuboring):
+
+   ```powershell
+   winget install OpenJS.NodeJS.LTS
+   ```
+
+   Yoki o'rnatuvchini [nodejs.org](https://nodejs.org/en/download) saytidan yuklab oling. Keyin yangi terminal oching.
+
+2. The Atlas'ni o'rnating:
+
+   ```powershell
+   npm i -g the-atlas
+   ```
+
+3. Ishga tushiring:
+
+   ```powershell
+   atlas
+   ```
+
+</Steps>
+
+<Aside type="tip">
+To'liq rang va ikonkalar uchun [Windows Terminal](https://aka.ms/terminal) dan foydalaning. Eski konsol (alohida oynadagi cmd yoki Windows PowerShell 5.1) ham ishlaydi, lekin oddiy ASCII belgilar bilan. Batafsil: [Terminallar](/getting-started/terminals/).
+</Aside>
+
+</TabItem>
+<TabItem label="macOS">
+
+<Steps>
+
+1. Node.js 22+ ni o'rnating (`node --version` 22 yoki undan yuqorini ko'rsatsa, bu qadamni o'tkazib yuboring):
+
+   ```bash
+   brew install node
+   ```
+
+   Yoki o'rnatuvchini [nodejs.org](https://nodejs.org/en/download) saytidan yuklab oling.
+
+2. The Atlas'ni o'rnating:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+3. Ishga tushiring:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+<TabItem label="Linux">
+
+<Steps>
+
+1. Node.js 22+ ni o'rnating (`node --version` 22 yoki undan yuqorini ko'rsatsa, bu qadamni o'tkazib yuboring). Distributiv paketlari ko'pincha eski bo'ladi; [nodejs.org](https://nodejs.org/en/download) yoki nvm kabi versiya menejeridan foydalaning:
+
+   ```bash
+   nvm install 22
+   ```
+
+2. The Atlas'ni o'rnating:
+
+   ```bash
+   npm i -g the-atlas
+   ```
+
+   Agar npm `EACCES` xatosini bersa, global npm papkangiz root'ga tegishli. `sudo` o'rniga nvm dan foydalaning yoki foydalanuvchi prefiksini o'rnating (`npm config set prefix ~/.local`).
+
+3. Ishga tushiring:
+
+   ```bash
+   atlas
+   ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+## O'rnatishni tekshirish
+
+```bash
+atlas --version
+atlas doctor
+```
+
+`atlas doctor` Node, npm, git, bash va Python'ni tekshiradi, terminalingiz haqida aniqlagan ma'lumotni ko'rsatadi va har bir ulangan provayderni tekshirib ko'radi.
+
+## Yangilash
+
+```bash
+npm i -g the-atlas@latest
+```
+
+Kalitlar, chatlar va sozlamalar `~/.the-atlas/` papkasida saqlanadi va yangilanishdan keyin ham qoladi.
+
+## O'chirish
+
+```bash
+npm uninstall -g the-atlas
+```
+
+Bunda ma'lumotlaringiz saqlanib qoladi. Kalitlar, chat tarixi va sozlamalarni ham o'chirish uchun ma'lumotlar papkasini o'chiring:
+
+<Tabs syncKey="os">
+<TabItem label="Windows">
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.the-atlas"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+<TabItem label="Linux">
+
+```bash
+rm -rf ~/.the-atlas
+```
+
+</TabItem>
+</Tabs>
+
+Agar `ATLAS_HOME` ni o'rnatgan bo'lsangiz, o'sha papkani o'chiring. Agar Claude Code status qatorini o'rnatgan bo'lsangiz, `~/.claude/settings.json` faylidan `statusLine` yozuvini olib tashlang.
+
+## Keyingi qadam
+
+[Tez boshlash](/getting-started/quickstart/): bepul AI ulang va birinchi savolingizni bering.

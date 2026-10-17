@@ -1,0 +1,67 @@
+---
+title: "Quickstart"
+description: "Connect a free AI with one click and ask your first question."
+sidebar:
+  order: 2
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+<Steps>
+
+1. **Start The Atlas** in any folder:
+
+   ```bash
+   atlas
+   ```
+
+   The ATLAS logo types itself in, then the chat opens. The interface starts in Uzbek; step 4 switches it to English.
+
+2. **Connect an AI.** On the first run no AI is connected, so the connect picker opens by itself. Later you can open it with `/connect`.
+
+   Pick **OpenRouter**. Your browser opens the OpenRouter sign-in page. Sign in and approve; the key comes back to the terminal by itself and is verified. Press `k` to paste a key by hand instead, or `Esc` to cancel.
+
+   Other providers open their key page in the browser; paste the key and press Enter. See [Connecting providers](/en/guides/connect/).
+
+3. **Ask.** Type a question and press Enter:
+
+   ```text
+   › explain what a monorepo is in two sentences
+   ```
+
+   The reply streams in. While it streams, `Esc` stops it. The status line under the input shows the model that answered and its remaining free requests.
+
+4. **Change the language** of the interface (`uz`, `ru` or `en`):
+
+   ```text
+   /lang en
+   ```
+
+   Or from your shell: `atlas lang en`. The AI itself replies in the language you write in.
+
+</Steps>
+
+## What to try next
+
+| Type | What it does |
+|---|---|
+| `/` | Show all slash commands |
+| `/model` | Pick a model from all connected AIs |
+| `@src/app.ts what does this do?` | Attach a file to the question |
+| `/compare` | Ask 2 or 3 AIs at once |
+| `/agent add a README` | Let the AI edit files and run commands, with your approval |
+| `/agents` | Open one of 47 AI coding CLIs in a new window |
+| `ctrl+r` | Speak instead of typing |
+
+## Without the chat UI
+
+```bash
+atlas ask "what is the capital of Uzbekistan?"
+git diff | atlas ask "review this change"
+```
+
+`atlas ask` prints the answer to stdout; piped input is appended to the question.
+
+<Aside>
+Keys are stored only on your computer, in `~/.the-atlas/config.json`. The Atlas sends them only to the provider they belong to.
+</Aside>

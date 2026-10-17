@@ -1,0 +1,44 @@
+---
+title: "Kengaytmalar"
+description: "The Atlas'ni MCP serverlar va 47 ta tashqi AI agent bilan kengaytiring."
+sidebar:
+  order: 1
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+The Atlas ikki yo'l bilan kengayadi: **MCP serverlar** agent rejimiga yangi vositalar beradi, **agentlar katalogi** esa boshqa AI buyruq qatori vositalarini ishga tushiradi.
+
+<CardGrid>
+  <LinkCard title="MCP serverlar" description="Brauzer, GitHub, ma'lumotlar bazalari, Google Drive va istalgan MCP server agent rejimi uchun vosita sifatida." href="/guides/mcp/" />
+  <LinkCard title="Agentlar katalogi" description="47 ta AI CLI agent: o'rnatish buyruqlari, kirish turi va Windows qo'llab-quvvatlashi bilan." href="/extensions/agents/" />
+</CardGrid>
+
+## MCP shablonlari
+
+`atlas mcp add <preset>` bilan qo'shing:
+
+| Shablon | Agentga nima beradi |
+|---|---|
+| `filesystem` | Joriy papka bilan cheklangan fayllarga kirish |
+| `github` | GitHub repozitoriylari, issue va pull request'lar (token kerak) |
+| `browser` | Playwright boshqaradigan brauzer |
+| `memory` | Doimiy bilimlar grafi |
+| `sequential-thinking` | Bosqichma-bosqich fikrlash vositasi |
+| `sqlite` | SQLite ma'lumotlar bazasi fayli |
+| `postgres` | PostgreSQL ma'lumotlar bazasi |
+| `gdrive` | Google Drive |
+
+Boshqa har qanday server: `atlas mcp add <name> -- <command>` yoki `atlas mcp add <name> --url <url>`. Claude Desktop'da ishlatayotgan serverlaringiz: `atlas mcp import claude`.
+
+Har bir MCP vosita chaqiruvi ruxsatingizni so'raydi.
+
+## Agentlar katalogi
+
+`atlas agents` 47 ta agentdan iborat qidiriladigan ro'yxatni ochadi, jumladan Claude Code, OpenAI Codex, Gemini CLI, GitHub Copilot, Aider, OpenCode, Goose va Ollama. Birini tanlang: The Atlas kerak bo'lsa uni o'rnatadi va yangi oynada ochadi. `Tab` bilan (yoki `atlas run <agent> --free`) agent Atlas bepul modellaringizda ishlaydi.
+
+- [Agentlarning to'liq jadvali](/extensions/agents/)
+- [Ishga tushirgich qanday ishlaydi](/guides/agents/)
+- [O'z agentlaringizni qo'shish](/guides/agents/#oz-agentlaringizni-qoshish)
+
+Agentlar katalogi [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI) (MIT) dan olingan.

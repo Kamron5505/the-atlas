@@ -1,0 +1,73 @@
+---
+title: "Подключение провайдеров"
+description: "Подключите OpenRouter в один клик, добавьте API-ключи других провайдеров или используйте локальные модели."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Мастер подключения
+
+```bash
+atlas connect            # выбрать из списка
+atlas connect groq       # сразу к одному провайдеру
+```
+
+В чате используйте `/connect` или `/connect groq`.
+
+- **OpenRouter**: вход в один клик. Браузер открывает OpenRouter, вы подтверждаете, и ваш собственный ключ сам возвращается в терминал. Нажмите `k`, чтобы вставить ключ вручную.
+- **Другие облачные провайдеры**: браузер открывает страницу ключей провайдера. Создайте ключ, вставьте его, нажмите Enter. The Atlas проверяет ключ перед сохранением.
+- **Ollama, OmniRoute**: локальные, без ключа. The Atlas проверяет, что сервер запущен.
+
+## Провайдеры
+
+| ID | Провайдер | Тариф | Где взять ключ | Переменная окружения |
+|---|---|---|---|---|
+| `openrouter` | OpenRouter | бесплатно | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
+| `gemini` | Google Gemini | бесплатно | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
+| `groq` | Groq | бесплатно | [console.groq.com/keys](https://console.groq.com/keys) | `GROQ_API_KEY` |
+| `cerebras` | Cerebras | бесплатно | [cloud.cerebras.ai](https://cloud.cerebras.ai) | `CEREBRAS_API_KEY` |
+| `mistral` | Mistral | бесплатно | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) | `MISTRAL_API_KEY` |
+| `github` | GitHub Models | бесплатно | [github.com/settings/tokens](https://github.com/settings/tokens) | `GITHUB_TOKEN` |
+| `nvidia` | NVIDIA NIM | бесплатно | [build.nvidia.com](https://build.nvidia.com) | `NVIDIA_API_KEY` |
+| `sambanova` | SambaNova | бесплатно | [cloud.sambanova.ai/apis](https://cloud.sambanova.ai/apis) | `SAMBANOVA_API_KEY` |
+| `omniroute` | OmniRoute | локально | [OmniRoute на GitHub](https://github.com/diegosouzapw/OmniRoute) | `OMNIROUTE_API_KEY` (необязательно) |
+| `ollama` | Ollama | локально | [ollama.com/download](https://ollama.com/download) | нет |
+| `openai` | OpenAI | платно | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
+| `anthropic` | Anthropic Claude | платно | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` |
+
+Модели по умолчанию и базовые URL: [Справочник провайдеров](/ru/reference/providers/).
+
+## Ключи из оболочки
+
+```bash
+atlas keys add groq              # спросит ключ, ввод скрыт
+atlas keys add groq gsk_...      # или передать сразу (останется в истории оболочки)
+atlas keys list                  # сохранённые ключи, замаскированы
+atlas keys rm groq               # удалить ключ
+atlas providers                  # все провайдеры: готов, нет ключа или локальный
+```
+
+`atlas doctor` пингует каждого подключённого провайдера и показывает время ответа и число моделей.
+
+## Переменные окружения
+
+Если для провайдера нет сохранённого ключа, The Atlas читает переменную из таблицы выше. Сохранённый ключ всегда важнее.
+
+```bash
+export GROQ_API_KEY=gsk_...
+atlas
+```
+
+## Локальные модели
+
+**Ollama**: установите с [ollama.com](https://ollama.com/download), скачайте модель (`ollama pull llama3.2`) и держите Ollama запущенной. The Atlas обращается к `http://localhost:11434/v1`.
+
+**OmniRoute**: локальный шлюз, который объединяет много аккаунтов и бесплатных тарифов. Запустите `atlas omniroute`. См. [OmniRoute](/ru/guides/omniroute/).
+
+В режиме auto незапущенный локальный сервер молча пропускается.
+
+<Aside type="caution">
+Ключи хранятся открытым текстом в `~/.the-atlas/config.json` (права 600 на macOS и Linux). The Atlas отправляет каждый ключ только его провайдеру. Не делитесь этим файлом и не перепродавайте и не раздавайте ключи бесплатных тарифов.
+</Aside>

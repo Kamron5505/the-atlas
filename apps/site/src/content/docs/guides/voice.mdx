@@ -1,0 +1,89 @@
+---
+title: "Ovozli kiritish"
+description: "Yozish o'rniga gapiring: ffmpeg yozib oladi, Groq Whisper matnga aylantiradi."
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+
+Chatda `ctrl+r` ni bosing, gapiring, `Enter` ni bosing. Tanilgan matn kiritish maydoniga qo'yiladi (yuborilmaydi), shuning uchun avval uni tahrirlashingiz mumkin.
+
+## Sozlash
+
+<Steps>
+
+1. **ffmpeg ni o'rnating** (u mikrofonni yozib oladi):
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   winget install Gyan.FFmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   brew install ffmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   sudo apt install ffmpeg
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Keyin yangi terminal oching. Agar ffmpeg The Atlas topa olmaydigan joyga o'rnatilgan bo'lsa, `ATLAS_FFMPEG` ga uning to'liq yo'lini yozing.
+
+2. **Nutqni tanish uchun Groq'ni ulang** (bepul):
+
+   ```bash
+   atlas connect groq
+   ```
+
+   The Atlas Groq'ning `whisper-large-v3-turbo` modelidan foydalanadi. Groq kaliti bo'lmasa va OpenAI kaliti ulangan bo'lsa, OpenAI `whisper-1` ishlatiladi.
+
+</Steps>
+
+## Chatda
+
+| Tugma | Amal |
+|---|---|
+| `ctrl+r` yoki `/voice` | Yozishni boshlash |
+| `Enter` | To'xtatish va matnga aylantirish |
+| `Esc` | Bekor qilish; hech narsa yuborilmaydi |
+
+Oldin yozgan matningiz saqlanadi; tanilgan matn uning oxiriga qo'shiladi.
+
+## Terminaldan
+
+`atlas voice` bir marta yozib oladi va matnni stdout'ga chiqaradi, shuning uchun uni pipe qilish mumkin:
+
+```bash
+atlas voice
+atlas voice -l ru                 # language hint: uz, ru or en
+atlas voice -s 30                 # stop after 30 seconds (default 120)
+atlas voice | atlas ask           # ask by voice
+```
+
+## Mikrofon tanlash
+
+```bash
+atlas voice devices               # list microphones; the one in use is marked
+atlas voice device 2              # remember microphone number 2
+atlas voice device "USB Mic"      # or by name
+atlas voice device auto           # back to the system default
+atlas voice -d 2                  # use one just for this recording
+```
+
+Tanlov `~/.the-atlas/voice.json` da saqlanadi.
+
+<Aside>
+Yozuvlar faqat nutq provayderiga (Groq yoki OpenAI) yuboriladi va keyin o'chiriladi. Yuklash hajmi 25 MB bilan cheklangan. macOS'da System Settings'da terminal ilovangizga mikrofonga ruxsat bering.
+</Aside>

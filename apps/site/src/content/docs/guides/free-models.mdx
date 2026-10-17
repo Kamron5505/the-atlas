@@ -1,0 +1,73 @@
+---
+title: "Bepul modellar va avto-almashish"
+description: "Avto rejim bepul modelni qanday tanlaydi, xato bo'lsa qanday almashadi va bepul so'rovlarni qanday sanaydi."
+sidebar:
+  order: 2
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Odatda The Atlas **auto** rejimida ishlaydi: siz ulagan AI'lardagi bepul modellardan foydalanadi va model band bo'lsa yoki limiti tugasa, boshqasiga o'tadi.
+
+## OpenRouter `openrouter/free`
+
+The Atlas'da OpenRouter'ning standart modeli `openrouter/free`. Bu router doim hozir bepul bo'lgan modelga yo'naltiradi. Bitta OpenRouter kaliti ko'plab bepul modellarni beradi; ularni ko'rish:
+
+```bash
+atlas models openrouter --free
+```
+
+## Almashish tartibi
+
+Auto rejimda provayderlar shu tartibda sinab ko'riladi, kaliti yo'qlari o'tkazib yuboriladi:
+
+1. `openrouter`
+2. `gemini`
+3. `groq`
+4. `cerebras`
+5. `mistral`
+6. `github`
+7. `nvidia`
+8. `sambanova`
+9. `omniroute` (ishlamayotgan bo'lsa, jimgina o'tkazib yuboriladi)
+10. `ollama` (ishlamayotgan bo'lsa, jimgina o'tkazib yuboriladi)
+11. Siz ulagan pullik provayderlar (`openai`, `anthropic`)
+
+Har bir provayderda The Atlas avval tanlangan yoki standart modelni sinaydi. OpenRouter'da bu model 404, 429, 502 yoki 503 qaytarsa, keyingi provayderga o'tishdan oldin yana ikkitagacha bepul modelni sinaydi.
+
+Almashish **faqat birinchi so'z kelguncha** bo'ladi, shuning uchun bitta javobda ikki model aralashmaydi. Har bir almashish chatda xira qator bilan ko'rsatiladi.
+
+Tartibni `~/.the-atlas/config.json` dagi `order` ni tahrirlab o'zgartiring. `atlas omniroute` OmniRoute'ni birinchi o'ringa qo'yadi.
+
+## Auto yoki aniq model
+
+| Nima kerak | Nima qilish kerak |
+|---|---|
+| Avtomatik almashish | `/provider auto` yoki `atlas use auto` |
+| Bitta provayder, uning standart modeli | `/provider groq` yoki `atlas use groq` |
+| Bitta aniq model | `/model groq/llama-3.3-70b-versatile` yoki `atlas use groq llama-3.3-70b-versatile` |
+| Ro'yxatdan tanlash | `/model` |
+
+Provayder qat'iy tanlanganda boshqa provayderlarga almashish bo'lmaydi.
+
+## Bepul so'rovlar hisoblagichi
+
+Status qatori javob bergan provayderda qancha so'rov qolganini ko'rsatadi, masalan `980/1000` yoki `≈42/50`.
+
+- `≈` belgisiz raqamlar provayderning rate-limit sarlavhalaridan olinadi. `/min` daqiqalik limitni bildiradi.
+- `≈` belgili raqamlar sarlavha yubormaydigan provayderlar uchun mahalliy taxmin: OpenRouter kuniga 50, Gemini 250 va GitHub Models 150 so'rov, The Atlas o'zi sanaydi.
+
+Kunlik limitning 15% yoki undan kami qolganda chat bir marta ogohlantiradi. Hisoblagichlar `~/.the-atlas/limits.json` da saqlanadi va har kuni (UTC) nolga tushadi.
+
+<Aside>
+Taxminlar aniq emas. Haqiqiy limitlar akkauntingizga bog'liq; masalan, OpenRouter kreditli akkauntlar uchun kunlik bepul limitni oshiradi.
+</Aside>
+
+## 429 nimani anglatadi
+
+HTTP **429** "juda ko'p so'rov" degani: model yuqori oqimda band yoki hozircha bepul limitingiz tugagan. The Atlas 429, 402 va kvota, rate limit yoki kredit haqida gapiradigan xatolarni limit deb hisoblaydi.
+
+- Auto rejimda u o'zi keyingi model yoki provayderga o'tadi.
+- Barcha variantlar limitga yetganda, menyu keyingi qadamni so'raydi: boshqa ulangan AI'ga o'tish, auto'ga qaytish, boshqa model tanlash yoki yana bir AI ulash. Savolingiz tanlagan AI'ga qayta yuboriladi.
+
+Eng oson yechim: `/connect` bilan ikkinchi bepul provayderni ulang. Groq, Gemini va Cerebras'ning bepul tariflari bor.

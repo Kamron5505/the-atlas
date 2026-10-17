@@ -1,0 +1,89 @@
+---
+title: "Voice input"
+description: "Speak instead of typing: ffmpeg records, Groq Whisper turns it into text."
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Steps, Aside } from '@astrojs/starlight/components';
+
+Press `ctrl+r` in the chat, speak, press `Enter`. The recognized text is inserted into the input box (it is not sent), so you can edit it first.
+
+## Setup
+
+<Steps>
+
+1. **Install ffmpeg** (it records the microphone):
+
+   <Tabs syncKey="os">
+   <TabItem label="Windows">
+
+   ```powershell
+   winget install Gyan.FFmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```bash
+   brew install ffmpeg
+   ```
+
+   </TabItem>
+   <TabItem label="Linux">
+
+   ```bash
+   sudo apt install ffmpeg
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Open a new terminal afterwards. If ffmpeg is installed somewhere The Atlas cannot find, set `ATLAS_FFMPEG` to its full path.
+
+2. **Connect Groq** for speech recognition (free):
+
+   ```bash
+   atlas connect groq
+   ```
+
+   The Atlas uses Groq's `whisper-large-v3-turbo`. Without a Groq key it falls back to OpenAI `whisper-1` if an OpenAI key is connected.
+
+</Steps>
+
+## In the chat
+
+| Key | Action |
+|---|---|
+| `ctrl+r` or `/voice` | Start recording |
+| `Enter` | Stop and transcribe |
+| `Esc` | Cancel; nothing is uploaded |
+
+Text you had already typed is kept; the recognized text is appended.
+
+## From the shell
+
+`atlas voice` records once and prints the text to stdout, so you can pipe it:
+
+```bash
+atlas voice
+atlas voice -l ru                 # language hint: uz, ru or en
+atlas voice -s 30                 # stop after 30 seconds (default 120)
+atlas voice | atlas ask           # ask by voice
+```
+
+## Choosing a microphone
+
+```bash
+atlas voice devices               # list microphones; the one in use is marked
+atlas voice device 2              # remember microphone number 2
+atlas voice device "USB Mic"      # or by name
+atlas voice device auto           # back to the system default
+atlas voice -d 2                  # use one just for this recording
+```
+
+The choice is saved in `~/.the-atlas/voice.json`.
+
+<Aside>
+Recordings are sent only to the speech provider (Groq or OpenAI) and deleted afterwards. Uploads are limited to 25 MB. On macOS, allow microphone access for your terminal app in System Settings.
+</Aside>

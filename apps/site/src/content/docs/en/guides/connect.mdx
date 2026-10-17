@@ -1,0 +1,73 @@
+---
+title: "Connecting providers"
+description: "Connect OpenRouter with one click, add API keys for other providers, or use local models."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## The connect wizard
+
+```bash
+atlas connect            # pick from a list
+atlas connect groq       # go straight to one provider
+```
+
+In the chat, use `/connect` or `/connect groq`.
+
+- **OpenRouter**: one-click sign-in. The browser opens OpenRouter, you approve, and your own key returns to the terminal by itself. Press `k` to paste a key instead.
+- **Other cloud providers**: the browser opens the provider's key page. Create a key, paste it, press Enter. The Atlas checks the key before saving it.
+- **Ollama, OmniRoute**: local, no key. The Atlas checks that the server is running.
+
+## Providers
+
+| ID | Provider | Tier | Get a key | Env variable |
+|---|---|---|---|---|
+| `openrouter` | OpenRouter | free | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
+| `gemini` | Google Gemini | free | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
+| `groq` | Groq | free | [console.groq.com/keys](https://console.groq.com/keys) | `GROQ_API_KEY` |
+| `cerebras` | Cerebras | free | [cloud.cerebras.ai](https://cloud.cerebras.ai) | `CEREBRAS_API_KEY` |
+| `mistral` | Mistral | free | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) | `MISTRAL_API_KEY` |
+| `github` | GitHub Models | free | [github.com/settings/tokens](https://github.com/settings/tokens) | `GITHUB_TOKEN` |
+| `nvidia` | NVIDIA NIM | free | [build.nvidia.com](https://build.nvidia.com) | `NVIDIA_API_KEY` |
+| `sambanova` | SambaNova | free | [cloud.sambanova.ai/apis](https://cloud.sambanova.ai/apis) | `SAMBANOVA_API_KEY` |
+| `omniroute` | OmniRoute | local | [OmniRoute on GitHub](https://github.com/diegosouzapw/OmniRoute) | `OMNIROUTE_API_KEY` (optional) |
+| `ollama` | Ollama | local | [ollama.com/download](https://ollama.com/download) | none |
+| `openai` | OpenAI | paid | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
+| `anthropic` | Anthropic Claude | paid | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | `ANTHROPIC_API_KEY` |
+
+Default models and base URLs: [Providers reference](/en/reference/providers/).
+
+## Manage keys from the shell
+
+```bash
+atlas keys add groq              # asks for the key, typed hidden
+atlas keys add groq gsk_...      # or pass it (it stays in your shell history)
+atlas keys list                  # stored keys, masked
+atlas keys rm groq               # remove a key
+atlas providers                  # every provider: ready, no key, or local
+```
+
+`atlas doctor` pings every connected provider and shows the response time and model count.
+
+## Environment variables
+
+If no key is stored for a provider, The Atlas reads the variable from the table above. A stored key always wins.
+
+```bash
+export GROQ_API_KEY=gsk_...
+atlas
+```
+
+## Local models
+
+**Ollama**: install it from [ollama.com](https://ollama.com/download), pull a model (`ollama pull llama3.2`), keep it running. The Atlas talks to `http://localhost:11434/v1`.
+
+**OmniRoute**: a local gateway that pools many accounts and free tiers. Run `atlas omniroute`. See [OmniRoute](/en/guides/omniroute/).
+
+In auto mode a local server that is not running is skipped silently.
+
+<Aside type="caution">
+Keys are stored in plain text in `~/.the-atlas/config.json` (file mode 600 on macOS and Linux). The Atlas sends each key only to its own provider. Do not share the file, and do not resell or share free-tier keys.
+</Aside>

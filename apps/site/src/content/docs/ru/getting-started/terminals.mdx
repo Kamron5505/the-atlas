@@ -1,0 +1,67 @@
+---
+title: "Терминалы"
+description: "Поддерживаемые терминалы, упрощённые цвета и символы, и как их задать вручную."
+sidebar:
+  order: 3
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Atlas определяет, что умеет рисовать ваш терминал, и сам упрощает вывод: truecolor, затем 256 цветов, затем 16 цветов, затем без цвета; Unicode-символы заменяются простым ASCII.
+
+## Поддерживаемые терминалы
+
+| Терминал | Цвет | Символы |
+|---|---|---|
+| Windows Terminal | truecolor | Unicode |
+| Терминал VS Code | truecolor | Unicode |
+| iTerm2, WezTerm, Ghostty | truecolor | Unicode |
+| macOS Terminal.app | 256 цветов | Unicode |
+| GNOME Terminal, Konsole, kitty, Alacritty и другие xterm-совместимые терминалы | 256 цветов или truecolor | Unicode |
+| Старая консоль Windows (cmd или Windows PowerShell 5.1 в отдельном окне) | как сообщает Node | ASCII |
+| Виртуальная консоль Linux (`TERM=linux`) | 16 цветов | ASCII |
+| Pipe, файлы, логи CI | без цвета | Unicode |
+
+Запустите `atlas doctor`, чтобы увидеть, что определилось. Раздел **Terminal** показывает имя терминала, ширину, глубину цвета, поддержку Unicode и нужные переменные (`TERM`, `TERM_PROGRAM`, `WT_SESSION`).
+
+## Логотип
+
+Логотипу ATLAS из больших букв нужно минимум 45 колонок. В более узком окне или с `ATLAS_ASCII=1` печатается логотип в одну строку. Логотип печатается по буквам; задайте `ATLAS_NO_ANIM=1`, чтобы вывести его сразу.
+
+## Ручная настройка
+
+| Переменная | Эффект |
+|---|---|
+| `NO_COLOR=1` | Совсем без цвета |
+| `FORCE_COLOR=0` | Без цвета |
+| `FORCE_COLOR=1` | 16 цветов |
+| `FORCE_COLOR=2` | 256 цветов |
+| `FORCE_COLOR=3` | Truecolor |
+| `ATLAS_ASCII=1` | Простые ASCII-символы и логотип в одну строку |
+| `ATLAS_UNICODE=1` | Доверять шрифту: Unicode-символы, даже если проверка говорит «нет» |
+| `ATLAS_NO_ANIM=1` | Без анимации печати |
+| `ATLAS_KEEP_SCREEN=1` | Оставить чат на экране после выхода (по умолчанию экран очищается) |
+
+Пример для одного запуска:
+
+```bash
+ATLAS_ASCII=1 atlas
+```
+
+```powershell
+$env:ATLAS_ASCII = "1"; atlas
+```
+
+Все переменные: [Переменные окружения](/ru/reference/environment-variables/).
+
+## Совет для Windows
+
+<Aside type="tip">
+На Windows установите Windows Terminal для полного цвета, иконок и [строки состояния](/ru/guides/status-line/):
+
+```powershell
+winget install Microsoft.WindowsTerminal
+```
+
+`atlas doctor` предупреждает, если находит старую консоль. Windows Terminal также использует [запуск агентов](/ru/guides/agents/), чтобы открывать агентов в новом окне.
+</Aside>

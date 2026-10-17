@@ -1,0 +1,89 @@
+---
+title: "MCP-серверы"
+description: "Дайте режиму агента внешние инструменты через серверы Model Context Protocol."
+sidebar:
+  order: 6
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+MCP-серверы (Model Context Protocol) добавляют инструменты в [режим агента](/ru/guides/agent-mode/): браузер, GitHub, базы данных, Google Drive и другое. The Atlas подключается к вашим серверам при запуске режима агента и предлагает их инструменты ИИ.
+
+## Пресеты
+
+```bash
+atlas mcp add filesystem
+atlas mcp add github
+```
+
+| Пресет | Сервер | Что спросит |
+|---|---|---|
+| `filesystem` | `@modelcontextprotocol/server-filesystem`, только текущая папка | |
+| `github` | Удалённый сервер GitHub (`api.githubcopilot.com/mcp/`) | Токен GitHub |
+| `browser` | `@playwright/mcp` (Playwright) | |
+| `memory` | `@modelcontextprotocol/server-memory` | |
+| `sequential-thinking` | `@modelcontextprotocol/server-sequential-thinking` | |
+| `sqlite` | `mcp-server-sqlite-npx` | Путь к файлу базы |
+| `postgres` | `@henkey/postgres-mcp-server` | Строка подключения |
+| `gdrive` | `@piotr-agier/google-drive-mcp` | Один раз выполнить его команду `auth` (выводится после добавления) |
+
+Локальные пресеты запускаются через `npx -y`, поэтому Node.js должен быть в PATH. Секреты вводятся скрыто.
+
+## Свой сервер
+
+```bash
+# Локальный сервер: всё после -- это команда
+atlas mcp add mydb -- npx -y some-mcp-server --flag
+atlas mcp add mydb -e API_KEY=abc -e REGION=eu -- node server.js
+atlas mcp add mydb --cwd ./tools -- python server.py
+
+# Удалённый сервер (Streamable HTTP, запасной вариант SSE)
+atlas mcp add docs --url https://example.com/mcp
+atlas mcp add api --url https://example.com/mcp -H "Authorization=Bearer abc"
+```
+
+Заголовки и переменные окружения задаются как `KEY=VALUE`; заголовки также принимают `Key: Value`. Имена серверов: строчные буквы, цифры, `_` и `-` (до 32 символов).
+
+## Управление серверами
+
+```bash
+atlas mcp list              # серверы, статус и число инструментов
+atlas mcp tools github      # подключиться и показать инструменты сервера
+atlas mcp disable github    # оставить, но не запускать
+atlas mcp enable github
+atlas mcp remove github     # или: atlas mcp rm github
+```
+
+В чате `/mcp` показывает статус и инструменты каждого сервера.
+
+Имена инструментов показываются как `mcp__<server>__<tool>`. Значения переменных окружения и заголовков никогда не печатаются; токены в URL и аргументах маскируются.
+
+## Импорт из Claude Desktop
+
+```bash
+atlas mcp import claude
+```
+
+Читает `claude_desktop_config.json` из Claude Desktop, показывает найденные серверы и спрашивает перед добавлением. Уже существующие имена пропускаются. Файл Claude Desktop не меняется.
+
+## Одобрение
+
+<Aside type="caution">
+**Каждый вызов инструмента MCP требует вашего одобрения**, потому что The Atlas не может знать, что делает внешний инструмент. Ответьте «Да» или разрешите этот инструмент до конца работы агента.
+</Aside>
+
+## Файл настроек
+
+Серверы хранятся в `~/.the-atlas/mcp.json` в том же формате `mcpServers`, что и у Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"] },
+    "docs": { "url": "https://example.com/mcp", "headers": { "Authorization": "Bearer ..." } },
+    "old": { "command": "node", "args": ["server.js"], "disabled": true }
+  }
+}
+```
+
+Локальные серверы запускаются в папке проекта, если не задан `cwd`. Подключение ждёт до 15 секунд, вызов инструмента до 2 минут. Сломанный `mcp.json` выводит ошибку, но не останавливает чат.

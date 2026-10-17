@@ -1,0 +1,88 @@
+---
+title: "AI agents launcher"
+description: "Find, install and open 47 AI coding CLIs, optionally running them on Atlas free models."
+sidebar:
+  order: 8
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Atlas includes a catalog of 47 AI command-line agents: Claude Code, Codex, Gemini CLI, Aider, OpenCode, Goose and more. Full list: [Agent catalog](/en/extensions/agents/).
+
+## The picker
+
+```bash
+atlas agents               # interactive picker
+atlas agents --free        # only agents with a free tier
+atlas agents --installed   # only installed agents
+atlas agents --list        # print the catalog and exit
+```
+
+In the chat, use `/agents`.
+
+| Key | Action |
+|---|---|
+| Type | Filter by name, command, category or description |
+| `↑` `↓`, `PgUp` `PgDn` | Move |
+| `Tab` | Toggle "run on Atlas free models" |
+| `Enter` | Open the agent |
+| `Esc` | Close |
+
+The agent you opened last comes first, then installed agents, then the ones you use most.
+
+## New windows
+
+`Enter` opens the agent in a **new terminal window**, so your Atlas chat stays where it is:
+
+- **Windows**: Windows Terminal if installed, otherwise a new PowerShell window.
+- **macOS**: Terminal.app.
+- **Linux**: the first one found of `x-terminal-emulator`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `kitty`, `alacritty`, `xterm`.
+
+If the agent is not installed, The Atlas shows the install command and asks first. Installers that download and run a remote script are marked. The install runs in the new window.
+
+## Run on Atlas free models
+
+Press `Tab` in the picker, or pass `--free`. The Atlas starts a background [local proxy](/en/guides/serve/) on port 4141 and launches the agent with:
+
+```bash
+OPENAI_BASE_URL=http://127.0.0.1:4141/v1
+OPENAI_API_BASE=http://127.0.0.1:4141/v1
+OPENAI_API_KEY=<your atlas serve token>
+```
+
+Aider, Open Interpreter and Shell GPT work this way with no setup. Other OpenAI-compatible agents use the variables too; if an agent asks for a model, choose `auto`.
+
+## From the shell
+
+```bash
+atlas run aider                    # launch here; installs if missing
+atlas run aider --free             # on Atlas free models
+atlas run codex --window           # in a new terminal window
+atlas run aider -y                 # install without asking
+atlas run aider -- --help          # pass arguments to the agent
+atlas install gemini               # install only
+```
+
+`atlas run` accepts the agent name or its command. The first time you run an agent, The Atlas prints how it logs in (browser login, API key, subscription).
+
+## Windows notes
+
+- Install commands run in PowerShell. Agents with a winget or PowerShell installer use it.
+- Agents whose installer is a bash script need Git Bash ([Git for Windows](https://git-scm.com/downloads)) or WSL.
+- Some agents have no Windows build; they are marked **WSL only** in the catalog.
+- If an agent installs but is not found, open a new terminal so PATH refreshes, then run `atlas doctor`.
+
+## Add your own agents
+
+Create `~/.the-atlas/agents.conf`, one agent per line, same format as the bundled catalog:
+
+```text
+# NAME|BINARY|COMMAND|INSTALL|DESCRIPTION|CATEGORY|AUTH|URL|WIN_INSTALL
+My Agent|myagent|myagent|npm install -g my-agent@latest|My own agent|Coding|API key|https://example.com|-
+```
+
+`BINARY` may list alternatives (`a,b`). `WIN_INSTALL` is a PowerShell or winget command for Windows; `-` means WSL only. Your agents are added to the list; an agent with the same name as a bundled one is ignored.
+
+<Aside type="caution">
+Custom agents are marked as not verified by The Atlas when installing. Check the install command before you confirm.
+</Aside>

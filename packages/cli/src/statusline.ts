@@ -1,5 +1,6 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { basename } from "node:path";
+import { colorDepth, emojiSupported, paint, pipedColorDepth, unicodeSupported, type ColorDepth } from "./ui/term.js";
 
 type RGB = [number, number, number];
 
@@ -12,8 +13,27 @@ const REPO: RGB = [255, 214, 10];
 const CYAN: RGB = [0, 220, 255];
 const MAGENTA: RGB = [220, 90, 230];
 
-const fg = ([r, g, b]: RGB, s: string) => `\x1b[38;2;${r};${g};${b}m${s}\x1b[39m`;
-const bold = (s: string) => `\x1b[1m${s}\x1b[22m`;
+/** How to draw: colour depth, emoji markers, Unicode bar blocks. */
+export interface StatusStyle {
+  depth: ColorDepth;
+  emoji: boolean;
+  unicode: boolean;
+}
+
+/**
+ * In the Atlas TUI (stdout is a TTY) detect the terminal; piped to Claude Code,
+ * assume a modern renderer unless env says otherwise (NO_COLOR, ATLAS_ASCII, TERM=dumb...).
+ */
+export function statusStyle(): StatusStyle {
+  return {
+    depth: process.stdout.isTTY ? colorDepth() : pipedColorDepth(),
+    emoji: emojiSupported(),
+    unicode: unicodeSupported(),
+  };
+}
+
+const fg = (rgb: RGB, s: string, depth: ColorDepth) => paint(rgb, s, depth);
+const bold = (s: string, depth: ColorDepth) => (depth > 1 ? `\x1b[1m${s}\x1b[22m` : s);
 const mix = (a: RGB, b: RGB, t: number): RGB => [0, 1, 2].map((i) => Math.round(a[i]! + (b[i]! - a[i]!) * t)) as RGB;
 
 /** green(0,200,80) → yellow(220,200,0) → red(220,40,20) at t ∈ [0,1]. */
@@ -22,18 +42,26 @@ export function gradient(t: number): RGB {
   return x <= 0.5 ? mix(GREEN, YELLOW, x / 0.5) : mix(YELLOW, RED, (x - 0.5) / 0.5);
 }
 
-export function usageEmoji(pct: number): string {
-  if (pct >= 90) return "🚨";
-  if (pct >= 70) return "🔥";
-  if (pct >= 20) return "⚡️";
-  return "🟢";
+/** Context-usage marker; text (OK / MID / HOT / MAX) when emoji can't be drawn. */
+export function usageMarker(pct: number, emoji: boolean): string {
+  if (pct >= 90) return emoji ? "🚨" : "MAX";
+  if (pct >= 70) return emoji ? "🔥" : "HOT";
+  if (pct >= 20) return emoji ? "⚡️" : "MID";
+  return emoji ? "🟢" : "OK";
 }
 
-/** 20 blocks; filled ones carry the gradient of their position, empty ones are dark gray. */
-export function contextBar(pct: number, blocks = 20): string {
+export function usageEmoji(pct: number): string {
+  return usageMarker(pct, true);
+}
+
+/** 20 blocks; filled ones carry the gradient of their position, empty ones are dark gray. ASCII: # and . */
+export function contextBar(pct: number, blocks = 20, style: StatusStyle = statusStyle()): string {
   const filled = Math.round((Math.min(100, Math.max(0, pct)) / 100) * blocks);
   let out = "";
-  for (let i = 0; i < blocks; i++) out += fg(i < filled ? gradient(i / (blocks - 1)) : EMPTY, "█");
+  for (let i = 0; i < blocks; i++) {
+    const on = i < filled;
+    out += fg(on ? gradient(i / (blocks - 1)) : EMPTY, style.unicode ? "█" : on ? "#" : ".", style.depth);
+  }
   return out;
 }
 
@@ -50,18 +78,21 @@ export interface StatusData {
 
 /**
  * repo │ 🌿 (branch) │ 🟢 ████░░ 12% │ $0.00 │ +10 -2 │ 🤖 model
- * Single line, truecolor, dim gray pipes between elements.
+ * Single line, dim gray pipes between elements. Without emoji / Unicode:
+ * repo | br:(branch) | MID ####.... 12% | $0.00 | +10 -2 | ai: model
  */
-export function renderStatusline(d: StatusData): string {
+export function renderStatusline(d: StatusData, style: StatusStyle = statusStyle()): string {
   const pct = Math.round(Math.min(100, Math.max(0, d.usedPct)));
-  const sep = fg(DIM, " | ");
+  const c = (rgb: RGB, s: string) => fg(rgb, s, style.depth);
+  const b = (s: string) => bold(s, style.depth);
+  const sep = c(DIM, " | ");
   const parts = [
-    bold(fg(REPO, d.repo)),
-    d.branch ? `🌿 ${bold(fg(CYAN, `(${d.branch})`))}` : undefined,
-    `${usageEmoji(pct)} ${contextBar(pct)} ${fg(gradient(pct / 100), `${pct}%`)}`,
-    fg(YELLOW, `$${d.costUsd.toFixed(2)}`),
-    `${fg(GREEN, `+${d.added}`)} ${fg(RED, `-${d.removed}`)}`,
-    `🤖 ${fg(MAGENTA, d.model)}`,
+    b(c(REPO, d.repo)),
+    d.branch ? `${style.emoji ? "🌿 " : "br:"}${b(c(CYAN, `(${d.branch})`))}` : undefined,
+    `${usageMarker(pct, style.emoji)} ${contextBar(pct, 20, style)} ${c(gradient(pct / 100), `${pct}%`)}`,
+    c(YELLOW, `$${d.costUsd.toFixed(2)}`),
+    `${c(GREEN, `+${d.added}`)} ${c(RED, `-${d.removed}`)}`,
+    `${style.emoji ? "🤖 " : "ai: "}${c(MAGENTA, d.model)}`,
   ];
   return parts.filter(Boolean).join(sep);
 }
@@ -73,9 +104,15 @@ export interface GitInfo {
   removed: number;
 }
 
+/**
+ * Repo config is untrusted (the status line runs in any folder): turn off
+ * core.fsmonitor and external diff drivers, which would run commands from it.
+ */
+export const GIT_SAFE = ["-c", "core.fsmonitor=false", "-c", "diff.external=", "--no-optional-locks"];
+
 function git(args: string, cwd: string): string | undefined {
   try {
-    return execSync(`git ${args}`, { cwd, encoding: "utf8", timeout: 1500, stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return execFileSync("git", [...GIT_SAFE, ...args.split(" ")], { cwd, encoding: "utf8", timeout: 1500, stdio: ["ignore", "pipe", "ignore"], windowsHide: true }).trim();
   } catch {
     return undefined;
   }
@@ -86,7 +123,7 @@ export function gitInfo(cwd: string): GitInfo {
   const top = git("rev-parse --show-toplevel", cwd);
   if (!top) return { repo: basename(cwd), added: 0, removed: 0 };
   const branch = git("branch --show-current", cwd) || git("rev-parse --short HEAD", cwd);
-  const stat = git("diff --shortstat HEAD", cwd) ?? "";
+  const stat = git("diff --no-ext-diff --no-textconv --shortstat HEAD", cwd) ?? "";
   return {
     repo: basename(top),
     branch,

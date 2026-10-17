@@ -1,0 +1,40 @@
+---
+title: "OmniRoute"
+description: "Запустите шлюз OmniRoute локально и поставьте его первым в цепочке auto."
+sidebar:
+  order: 11
+---
+
+[OmniRoute](https://github.com/diegosouzapw/OmniRoute) это отдельный ИИ-шлюз с открытым кодом. Он объединяет аккаунты и бесплатные тарифы многих провайдеров за одним OpenAI-совместимым endpoint. The Atlas может установить, запустить и подключить его за вас.
+
+## Локально
+
+```bash
+atlas omniroute
+```
+
+Эта команда:
+
+1. Устанавливает OmniRoute через `npm install -g omniroute@latest`, если его нет.
+2. Запускает его и открывает панель на `http://localhost:20128`.
+3. Ставит `omniroute` в начало порядка auto-переключения.
+
+Добавьте свои аккаунты и ключи в панели OmniRoute. The Atlas обращается к нему по `http://localhost:20128/v1`.
+
+В чате `/omniroute` делает то же самое через мастер подключения.
+
+## Удалённо
+
+Используйте экземпляр OmniRoute, запущенный в другом месте:
+
+```bash
+atlas omniroute --url https://gw.example.com/v1 --key <key>
+```
+
+URL и ключ сохраняются в `~/.the-atlas/config.json` (`baseURLs.omniroute`, `keys.omniroute`). Ключ также можно взять из `OMNIROUTE_API_KEY`.
+
+## Заметки
+
+- Если OmniRoute не запущен, режим auto молча пропускает его и берёт следующего провайдера.
+- Чтобы он больше не шёл первым, измените `order` в `config.json` или выберите другого провайдера через `/provider`.
+- Если он не запускается, выполните `omniroute` в другом терминале и посмотрите его вывод.

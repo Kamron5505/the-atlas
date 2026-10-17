@@ -1,0 +1,472 @@
+---
+import { Icon } from "@astrojs/starlight/components";
+import ArrowRight from "@lucide/astro/icons/arrow-right";
+import Bot from "@lucide/astro/icons/bot";
+import ChevronDown from "@lucide/astro/icons/chevron-down";
+import Gauge from "@lucide/astro/icons/gauge";
+import GitCompare from "@lucide/astro/icons/git-compare";
+import KeyRound from "@lucide/astro/icons/key-round";
+import Mic from "@lucide/astro/icons/mic";
+import Plug from "@lucide/astro/icons/plug";
+import Shuffle from "@lucide/astro/icons/shuffle";
+import SquareTerminal from "@lucide/astro/icons/square-terminal";
+import { AIDEVIX, DICT, GITHUB, href, type Locale } from "../i18n/ui";
+import TerminalDemo from "./demo/TerminalDemo.astro";
+import Install from "./landing/Install.astro";
+import Wordmark from "./landing/Wordmark.astro";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const L = DICT[locale];
+const docs = href(locale, "getting-started/installation/");
+
+// Each tile: icon, a real command or detail line, and its grid shape.
+const tiles = [
+  { icon: Shuffle, code: "openrouter → gemini → groq → cerebras → mistral → …", shape: "wide glow" },
+  { icon: KeyRound, code: "atlas connect", shape: "narrow" },
+  { icon: Bot, code: "atlas agents", shape: "narrow" },
+  { icon: SquareTerminal, code: 'atlas agent "fix the failing test"', shape: "wide tint" },
+  { icon: Plug, code: "atlas mcp import claude", shape: "half" },
+  { icon: Mic, code: "ctrl+r", shape: "half", kbd: true },
+] as const;
+const stepCode = ["npm i -g the-atlas", "atlas connect", "atlas"];
+---
+
+<div class="landing not-content">
+  <section class="hero" aria-labelledby="_top">
+    <div class="hero-copy">
+      <Wordmark />
+      <h1 id="_top">{L.pitch}</h1>
+      <p class="sub">{L.sub}</p>
+      <div class="actions">
+        <a class="btn primary" href={docs}>
+          {L.docsBtn}
+          <ArrowRight size={18} aria-hidden="true" />
+        </a>
+        <a class="btn ghost" href={GITHUB} rel="noopener">
+          <Icon name="github" size="1.125rem" />
+          GitHub
+        </a>
+      </div>
+    </div>
+    <Install L={L} />
+  </section>
+
+  <section class="demo" aria-labelledby="demo-title">
+    <h2 id="demo-title">{L.demoTitle}</h2>
+    <TerminalDemo name="chat" />
+  </section>
+
+  <section aria-labelledby="features-title">
+    <h2 id="features-title">{L.featuresTitle}</h2>
+    <ul class="bento" role="list">
+      {
+        tiles.map((t, i) => (
+          <li class={`tile ${t.shape}`}>
+            <t.icon size={22} stroke-width={1.75} class="tile-icon" aria-hidden="true" />
+            <h3>{L.features[i]!.title}</h3>
+            <p>{L.features[i]!.body}</p>
+            {"kbd" in t ? <kbd>{t.code}</kbd> : <code>{t.code}</code>}
+          </li>
+        ))
+      }
+    </ul>
+    <ul class="extras" role="list">
+      <li>
+        <GitCompare size={18} stroke-width={1.75} aria-hidden="true" />
+        <span><code>/compare</code> {L.compare}</span>
+      </li>
+      <li>
+        <Gauge size={18} stroke-width={1.75} aria-hidden="true" />
+        <span>{L.statusline} <code>atlas statusline --install claude</code></span>
+      </li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="steps-title">
+    <h2 id="steps-title">{L.stepsTitle}</h2>
+    <ol class="steps">
+      {
+        L.steps.map((s, i) => (
+          <li>
+            <span class="num" aria-hidden="true">{i + 1}</span>
+            <h3>{s.title}</h3>
+            <code>{stepCode[i]}</code>
+            <p>{s.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title">{L.faqTitle}</h2>
+    <div class="faq-list">
+      {
+        L.faq.map((f) => (
+          <details>
+            <summary>
+              {f.q}
+              <ChevronDown size={18} aria-hidden="true" class="chev" />
+            </summary>
+            <p>{f.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <nav aria-label="Footer">
+      <a href={GITHUB} rel="noopener">GitHub</a>
+      <a href={docs}>{L.nav.docs}</a>
+      <a href={href(locale, "changelog/")}>{L.nav.changelog}</a>
+      <a href={href(locale, "feedback/")}>{L.nav.feedback}</a>
+    </nav>
+    <p>
+      <a href={`${GITHUB}/blob/main/LICENSE`} rel="noopener">{L.license}</a>
+      <span aria-hidden="true">/</span>
+      <a href={AIDEVIX} rel="noopener">{L.credit}</a>
+    </p>
+  </footer>
+</div>
+
+<style>
+  .landing {
+    --gap: clamp(4rem, 9vw, 7rem);
+    color: var(--sl-color-gray-2);
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+  .landing > section + section {
+    margin-top: var(--gap);
+  }
+  h1,
+  h2,
+  h3 {
+    color: var(--sl-color-white);
+    margin: 0;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+  }
+  h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    line-height: 1.15;
+    margin-bottom: 1.75rem;
+    max-width: 30ch;
+  }
+  h3 {
+    font-size: 1.0625rem;
+    line-height: 1.3;
+  }
+  code,
+  kbd {
+    font-family: var(--atlas-font-mono);
+    font-size: 0.8125rem;
+  }
+
+  /* Hero */
+  .hero {
+    display: grid;
+    gap: 2.5rem;
+    align-items: end;
+    padding-top: clamp(1rem, 4vw, 3rem);
+  }
+  .hero-copy {
+    min-width: 0;
+  }
+  .hero h1 {
+    margin-top: 1.75rem;
+    font-size: clamp(2rem, 4.6vw, 3.25rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    max-width: 16ch;
+  }
+  .sub {
+    margin: 1rem 0 0;
+    font-size: 1.125rem;
+    line-height: 1.55;
+    max-width: 44ch;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.15rem;
+    border-radius: var(--atlas-radius);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .primary {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+  }
+  .primary:hover {
+    background: var(--sl-color-accent-high);
+  }
+  :root[data-theme="light"] .primary:hover {
+    background: var(--sl-color-accent-high);
+    color: #fff;
+  }
+  .ghost {
+    color: var(--sl-color-white);
+    border: 1px solid var(--sl-color-gray-5);
+  }
+  .ghost:hover {
+    border-color: var(--sl-color-gray-3);
+  }
+
+  /* Demo */
+  .demo h2 {
+    max-width: 34ch;
+  }
+
+  /* Bento */
+  .bento {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+  }
+  .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 1px solid var(--atlas-line);
+    border-radius: var(--atlas-radius);
+    background: var(--atlas-surface);
+    overflow: hidden;
+    margin: 0;
+  }
+  .tile p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    max-width: 52ch;
+  }
+  .tile code,
+  .tile kbd {
+    margin-top: auto;
+    padding-top: 1rem;
+    color: var(--sl-color-text-accent);
+    overflow-wrap: anywhere;
+  }
+  .tile kbd {
+    align-self: flex-start;
+    padding: 0.2rem 0.5rem;
+    margin-top: auto;
+    border: 1px solid var(--sl-color-gray-5);
+    border-bottom-width: 3px;
+    border-radius: 6px;
+    color: var(--sl-color-white);
+  }
+  .tile-icon {
+    color: var(--sl-color-text-accent);
+    margin-bottom: 0.5rem;
+  }
+  .glow {
+    background:
+      radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--atlas-neon) 14%, transparent), transparent 60%),
+      var(--atlas-surface);
+  }
+  .tint {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--atlas-deep) 16%, transparent), transparent 65%),
+      var(--atlas-surface);
+  }
+  .extras {
+    list-style: none;
+    padding: 0;
+    margin: 1.25rem 0 0;
+    display: grid;
+    gap: 0.75rem 2rem;
+    font-size: 0.9375rem;
+  }
+  .extras li {
+    display: flex;
+    gap: 0.625rem;
+    align-items: baseline;
+    margin: 0;
+  }
+  .extras :global(svg) {
+    flex-shrink: 0;
+    color: var(--sl-color-gray-3);
+    transform: translateY(3px);
+  }
+  .extras code {
+    color: var(--sl-color-white);
+  }
+
+  /* Steps: a real sequence, so numbered. */
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 2rem;
+    counter-reset: none;
+  }
+  .steps li {
+    position: relative;
+    margin: 0;
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+  }
+  .num {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--sl-color-accent);
+    color: var(--sl-color-text-accent);
+    font: 600 0.875rem var(--atlas-font-mono);
+    background: var(--atlas-bg);
+    position: relative;
+    z-index: 1;
+    margin-bottom: 0.5rem;
+  }
+  .steps code {
+    justify-self: start;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    background: var(--atlas-code-bg);
+    border: 1px solid var(--atlas-line);
+    color: var(--sl-color-white);
+  }
+  .steps p {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    max-width: 34ch;
+  }
+
+  /* FAQ */
+  .faq {
+    display: grid;
+    gap: 0 3rem;
+  }
+  .faq-list {
+    border-top: 1px solid var(--atlas-line);
+  }
+  details {
+    border-bottom: 1px solid var(--atlas-line);
+  }
+  summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 0;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .chev {
+    flex-shrink: 0;
+    color: var(--sl-color-gray-3);
+    transition: transform 0.2s ease;
+  }
+  details[open] .chev {
+    transform: rotate(180deg);
+  }
+  details p {
+    margin: 0 0 1.25rem;
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+
+  /* Footer */
+  .site-footer {
+    margin-top: var(--gap);
+    padding: 2rem 0 1rem;
+    border-top: 1px solid var(--atlas-line);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.875rem;
+  }
+  .site-footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+  .site-footer p {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    color: var(--sl-color-gray-4);
+  }
+  .site-footer a {
+    color: var(--sl-color-gray-3);
+    text-decoration: none;
+  }
+  .site-footer a:hover {
+    color: var(--sl-color-white);
+  }
+
+  @media (min-width: 48rem) {
+    .bento {
+      grid-template-columns: repeat(6, 1fr);
+    }
+    .wide {
+      grid-column: span 4;
+    }
+    .narrow {
+      grid-column: span 2;
+    }
+    .half {
+      grid-column: span 3;
+    }
+    .extras {
+      grid-template-columns: 1fr 1fr;
+    }
+    .steps {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    /* Connector line between the step numbers. */
+    .steps li:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      top: 1rem;
+      left: 2.75rem;
+      right: -1.25rem;
+      height: 1px;
+      background: linear-gradient(90deg, var(--sl-color-accent), var(--atlas-line));
+    }
+  }
+  @media (min-width: 64rem) {
+    .hero {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      gap: 3.5rem;
+    }
+    .faq {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    }
+  }
+</style>
