@@ -3,6 +3,14 @@ import type { AtlasConfig } from "@the-atlas/core";
 export type Lang = "uz" | "ru" | "en";
 
 const en = {
+  opened: "opened in a new window",
+  installAsk: "is not installed. Install it and open in a new window?",
+  installYes: "Yes, install and open",
+  installNo: "No",
+  remoteScript: "downloads and runs the official install script",
+  noWindow: "could not open a new terminal window",
+  wslOnly: "has no Windows build — use WSL",
+  agentsAsk: "Which agent should Atlas open?",
   keyAsk: "Paste your API key",
   browserOpened: "browser opened",
   keyOk: "Key verified",
@@ -113,6 +121,14 @@ const en = {
 type Dict = typeof en;
 
 const uz: Dict = {
+  opened: "yangi oynada ochildi",
+  installAsk: "o'rnatilmagan. O'rnatib, yangi oynada ochamizmi?",
+  installYes: "Ha, o'rnatib ochish",
+  installNo: "Yo'q",
+  remoteScript: "rasmiy o'rnatish skripti yuklab olinadi",
+  noWindow: "yangi terminal oynasini ochib bo'lmadi",
+  wslOnly: "Windows versiyasi yo'q — WSL'dan foydalaning",
+  agentsAsk: "Qaysi agentni ochamiz?",
   keyAsk: "API kalitni qo'ying",
   browserOpened: "brauzer ochildi",
   keyOk: "Kalit tekshirildi",
@@ -215,6 +231,14 @@ const uz: Dict = {
 };
 
 const ru: Dict = {
+  opened: "открыт в новом окне",
+  installAsk: "не установлен. Установить и открыть в новом окне?",
+  installYes: "Да, установить и открыть",
+  installNo: "Нет",
+  remoteScript: "скачает и запустит официальный установщик",
+  noWindow: "не удалось открыть новое окно терминала",
+  wslOnly: "нет версии для Windows — используйте WSL",
+  agentsAsk: "Какого агента открыть?",
   keyAsk: "Вставьте API-ключ",
   browserOpened: "открыт браузер",
   keyOk: "Ключ проверен",

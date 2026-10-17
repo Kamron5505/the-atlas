@@ -285,7 +285,7 @@ program
       saveConfig(cfg);
     }
     const port = Number(opts.port);
-    await startServer(cfg, { port, token: cfg.serveToken, onLog: (l) => console.log(c.gray(l)) });
+    await startServer(() => loadConfig(), { port, token: cfg.serveToken, onLog: (l) => console.log(c.gray(l)) });
     const url = `http://127.0.0.1:${port}/v1`;
     console.log(c.green(`● ${L.serveReady}: ${c.bold(url)}`));
     console.log(`${L.serveHint}\n  OPENAI_BASE_URL=${url}\n  OPENAI_API_KEY=${cfg.serveToken}\n  model: auto ${c.gray("| groq/llama-3.3-70b-versatile | openrouter/<id>")}`);

@@ -3,6 +3,11 @@ import { Box, Static, Text, useApp, useInput, useWindowSize } from "ink";
 import TextInput from "ink-text-input";
 import { useEffect, useRef, useState } from "react";
 import { isLang, t, type Lang } from "../i18n.js";
+import { findBinary, installFor, loadAgents, type Agent } from "../agents/catalog.js";
+import { rowsFor } from "../agents/command.js";
+import { AgentMenu, type MenuResult } from "../agents/Menu.js";
+import { openAgentWindow } from "../agents/run.js";
+import { installPlan } from "../agents/terminal.js";
 import { Connect, shortName } from "./Connect.js";
 import { Markdown } from "./Markdown.js";
 import { ModelPicker, type ModelChoice } from "./ModelPicker.js";
@@ -16,7 +21,13 @@ interface Entry {
   meta?: string;
 }
 
-type Overlay = null | { kind: "connect"; initial?: string } | { kind: "model" } | { kind: "limit"; provider: string; retry: string };
+type Overlay =
+  | null
+  | { kind: "connect"; initial?: string }
+  | { kind: "model" }
+  | { kind: "limit"; provider: string; retry: string }
+  | { kind: "agents" }
+  | { kind: "install"; pick: MenuResult };
 
 export type ChatExit = { kind: "quit" } | { kind: "agents" };
 
@@ -155,7 +166,7 @@ export function Chat({
       case "quit":
         return quit();
       case "agents":
-        return quit({ kind: "agents" });
+        return setOverlay({ kind: "agents" });
       case "connect":
         return setOverlay({ kind: "connect", initial: arg && getProvider(arg) ? arg : undefined });
       case "omniroute":
@@ -243,6 +254,26 @@ export function Chat({
     if (sent.current.at(-1) !== text) sent.current.push(text);
     if (text.startsWith("/")) return command(text);
     void send(text);
+  }
+
+  async function openAgent(agent: Agent, free: boolean) {
+    setOverlay(null);
+    try {
+      const ok = await openAgentWindow(agent, { free });
+      push(ok ? entry("step", agent.name, L.opened) : entry("error", `${agent.name}: ${L.noWindow}. atlas run ${agent.binary}`));
+    } catch (err) {
+      push(entry("error", (err as Error).message));
+    }
+  }
+
+  function pickAgent(pick: MenuResult | null) {
+    if (!pick) return setOverlay(null);
+    if (findBinary(pick.agent)) return void openAgent(pick.agent, pick.free);
+    if (!installFor(pick.agent)) {
+      setOverlay(null);
+      return push(entry("error", `${pick.agent.name} ${L.wslOnly} · ${pick.agent.url}`));
+    }
+    setOverlay({ kind: "install", pick });
   }
 
   function limitItems(failed: string): SelectItem<string>[] {
@@ -401,6 +432,31 @@ export function Chat({
             push(entry("step", L.limitAsk, it.label));
             // Re-ask the same question on the new AI.
             void send(retry, false, { provider: pid });
+          }}
+        />
+      )}
+
+      {overlay?.kind === "agents" && <AgentMenu rows={rowsFor(loadAgents(lang))} L={L} embedded onPick={pickAgent} />}
+      {overlay?.kind === "install" && (
+        <Select
+          L={L}
+          title={`${overlay.pick.agent.name} ${L.installAsk}`}
+          filterable={false}
+          items={[
+            {
+              key: "yes",
+              label: L.installYes,
+              value: true,
+              hint: `${installPlan(overlay.pick.agent).command ?? ""}${installPlan(overlay.pick.agent).remote ? ` · ${L.remoteScript}` : ""}`,
+            },
+            { key: "no", label: L.installNo, value: false },
+          ]}
+          onCancel={() => setOverlay(null)}
+          onSelect={(it) => {
+            const pick = overlay.pick;
+            if (!it.value) return setOverlay(null);
+            push(entry("step", L.installYes, pick.agent.name));
+            void openAgent(pick.agent, pick.free);
           }}
         />
       )}

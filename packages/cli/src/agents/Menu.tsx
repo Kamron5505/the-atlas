@@ -45,7 +45,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function AgentMenu({ rows, L, onPick }: { rows: MenuRow[]; L: Dict; onPick: (r: MenuResult | null) => void }) {
+export function AgentMenu({ rows, L, onPick, embedded = false }: { rows: MenuRow[]; L: Dict; onPick: (r: MenuResult | null) => void; embedded?: boolean }) {
   const { exit } = useApp();
   const { columns, rows: termRows } = useWindowSize();
   const [query, setQuery] = useState("");
@@ -69,11 +69,13 @@ export function AgentMenu({ rows, L, onPick }: { rows: MenuRow[]; L: Dict; onPic
   useInput((input, key) => {
     if (key.escape) {
       onPick(null);
-      return exit();
+      if (!embedded) exit();
+      return;
     }
     if (key.return && sel) {
       onPick({ agent: sel.agent, free });
-      return exit();
+      if (!embedded) exit();
+      return;
     }
     if (key.upArrow) return setCursor(Math.max(0, pos - 1));
     if (key.downArrow) return setCursor(Math.min(filtered.length - 1, pos + 1));

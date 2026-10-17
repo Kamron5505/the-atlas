@@ -10,13 +10,18 @@ export type AuthClass = "free" | "browser" | "key" | "paid" | "none";
 
 export interface Agent {
   name: string;
+  /** Primary executable name (first of `binaries`). */
   binary: string;
+  /** All accepted executable names, e.g. cursor-agent / agent. */
+  binaries: string[];
   command: string;
   install: string;
   description: string;
   category: string;
   auth: string;
   url: string;
+  /** Windows-specific installer (PowerShell/winget); "-" = no native build. */
+  winInstall?: string;
   authClass: AuthClass;
   /** Defined in the user's own agents.conf, not the bundled catalog. */
   custom: boolean;
@@ -39,15 +44,20 @@ export function parseCatalog(text: string, custom = false): Agent[] {
     const f = line.split("|").map((s) => s.trim());
     if (f.length < 6 || !f[0] || !f[1] || !f[2]) continue;
     const auth = f[6] ?? "";
+    const binaries = f[1].split(",").map((b) => b.trim()).filter(Boolean);
+    // WIN_INSTALL is the last column and may itself contain "|" (irm … | iex).
+    const winInstall = f.length > 8 ? f.slice(8).join(" | ").replace(/\s*\|\s*/g, " | ").trim() : undefined;
     out.push({
       name: f[0],
-      binary: f[1],
+      binary: binaries[0]!,
+      binaries,
       command: f[2],
       install: f[3] ?? "",
       description: f[4] ?? "",
       category: f[5] ?? "",
       auth,
       url: f[7] ?? "",
+      winInstall: winInstall || undefined,
       authClass: classifyAuth(auth),
       custom,
     });
@@ -126,9 +136,12 @@ export function extraBinDirs(): string[] {
   return dirs;
 }
 
+// npm writes an extensionless sh script next to foo.cmd; Windows can't run it (spawn ENOENT).
+const WIN_EXTS = [".exe", ".cmd", ".bat", ".com"];
+
 /** Full path of an executable, searching PATH plus extraBinDirs(). */
 export function which(binary: string, extra = true): string | undefined {
-  const exts = process.platform === "win32" ? ["", ...(process.env.PATHEXT ?? ".EXE;.CMD;.BAT;.PS1").toLowerCase().split(";")] : [""];
+  const exts = process.platform === "win32" ? WIN_EXTS : [""];
   const dirs = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
   if (extra) dirs.push(...extraBinDirs());
   for (const dir of dirs) {
@@ -144,13 +157,28 @@ export function which(binary: string, extra = true): string | undefined {
   return undefined;
 }
 
+/** First installed executable of the agent (any of its binary names). */
+export function findBinary(agent: Agent): { path: string; name: string } | undefined {
+  for (const name of agent.binaries) {
+    const path = which(name);
+    if (path) return { path, name };
+  }
+  return undefined;
+}
+
+/** Install command for this OS; null = not available natively here. */
+export function installFor(agent: Agent, platform = process.platform): string | null {
+  if (platform === "win32" && agent.winInstall) return agent.winInstall === "-" ? null : agent.winInstall;
+  return agent.install ? resolveInstall(agent.install, platform) : null;
+}
+
 /** Network-piped installers (`bash -c "$(curl …)"`) run remote code; we flag them in the UI. */
 export function isRemoteScript(install: string): boolean {
   return /curl|wget|iwr|Invoke-WebRequest/i.test(install);
 }
 
 /** Windows has `python`, not `python3`; npm shims are fine as-is. */
-export function resolveInstall(install: string): string {
-  if (process.platform === "win32") return install.replace(/\bpython3\b/g, "python");
+export function resolveInstall(install: string, platform = process.platform): string {
+  if (platform === "win32") return install.replace(/\bpython3\b/g, "python");
   return install;
 }

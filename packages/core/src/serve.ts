@@ -111,10 +111,13 @@ function modelsList(cfg: AtlasConfig) {
 }
 
 /** Local OpenAI-compatible endpoint so any agent can use the free-model fallback chain. */
-export function startServer(cfg: AtlasConfig, opts: ServeOptions): Promise<Server> {
+export function startServer(config: AtlasConfig | (() => AtlasConfig), opts: ServeOptions): Promise<Server> {
   const log = opts.onLog ?? (() => {});
+  // A getter lets a long-running server pick up keys added after it started.
+  const current = typeof config === "function" ? config : () => config;
   const server = createServer((req, res) => {
     const url = (req.url ?? "/").split("?")[0];
+    const cfg = current();
     if (url === "/health") return json(res, 200, { status: "ok" });
     if (!tokenOk(req.headers.authorization, opts.token)) return json(res, 401, { error: { message: "invalid atlas token" } });
     if (req.method === "GET" && (url === "/v1/models" || url === "/models")) {

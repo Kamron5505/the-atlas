@@ -10,7 +10,8 @@
     "build": "npm run build -w the-atlas",
     "typecheck": "tsc -p packages/core && tsc -p packages/cli",
     "test": "vitest run",
-    "dev": "tsx packages/cli/src/index.tsx"
+    "dev": "tsx packages/cli/src/index.tsx",
+    "check:agents": "node scripts/check-agents.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

@@ -15,7 +15,6 @@
  "bepul tier — Qwen login yoki API kalit": "free tier — Qwen login or API key",
  "Continue.dev terminal agenti": "Continue.dev terminal agent",
  "bepul tier — Continue login yoki API kalit": "free tier — Continue login or API key",
- "Cursor'ning terminal agenti (Windows'da emas)": "Cursor's terminal agent (not on Windows)",
  "Cursor hisobiga login": "Log in to your Cursor account",
  "Katta vazifalarni rejalashtiruvchi agent": "Agent that plans large tasks",
  "Plandex login yoki API kalit": "Plandex login or API key",
@@ -86,5 +85,6 @@
  "bepul — GitHub login (gh auth login)": "free — GitHub login (gh auth login)",
  "Terminalda ishlaydigan AI kod-review agenti": "AI code-review agent that runs in the terminal",
  "bepul tier — CodeRabbit login": "free tier — CodeRabbit login",
- "Git commit xabarlarini AI yozib beradi": "AI writes your Git commit messages"
+ "Git commit xabarlarini AI yozib beradi": "AI writes your Git commit messages",
+ "Cursor'ning terminal agenti": "Cursor's terminal agent"
 }

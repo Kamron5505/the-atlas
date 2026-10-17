@@ -178,3 +178,52 @@ describe("logo intro", () => {
     expect(all).toContain("\u001b[?25h"); // cursor restored
   });
 });
+
+describe("windows launch fixes", () => {
+  it("never resolves npm's extensionless sh-shim on Windows (freebuff ENOENT bug)", async () => {
+    if (process.platform !== "win32") return;
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const { which } = await import("../src/agents/catalog.js");
+    const dir = mkdtempSync(join(tmpdir(), "atlas-bin-"));
+    writeFileSync(join(dir, "fakeagent"), "#!/bin/sh\n");
+    expect(which("fakeagent", false) ?? "").not.toContain(join(dir, "fakeagent"));
+    writeFileSync(join(dir, "fakeagent.cmd"), "@echo off\n");
+    const saved = process.env.PATH;
+    process.env.PATH = dir;
+    try {
+      expect(which("fakeagent", false)).toBe(join(dir, "fakeagent.cmd"));
+    } finally {
+      process.env.PATH = saved;
+    }
+  });
+
+  it("parses Windows installers that contain a pipe and binary alternatives", async () => {
+    const { installFor } = await import("../src/agents/catalog.js");
+    const [cursor] = parseCatalog(`Cursor Agent|cursor-agent,agent|cursor-agent|bash -c "$(curl -fsS https://cursor.com/install)"|d|Coding|🌐|https://x|irm 'https://cursor.com/install?win32=true' | iex`);
+    expect(cursor!.binaries).toEqual(["cursor-agent", "agent"]);
+    expect(installFor(cursor!, "win32")).toBe("irm 'https://cursor.com/install?win32=true' | iex");
+    expect(installFor(cursor!, "linux")).toContain("curl");
+    const [q] = parseCatalog("Amazon Q|q|q chat||d|Coding|🆓|https://aws|-");
+    expect(installFor(q!, "win32")).toBeNull();
+  });
+
+  it("every catalog agent has an install path or a manual link on each OS", async () => {
+    const { installFor } = await import("../src/agents/catalog.js");
+    for (const a of loadAgents()) {
+      for (const os of ["win32", "linux", "darwin"] as const) {
+        expect(installFor(a, os) !== null || a.url.startsWith("http"), `${a.name} on ${os}`).toBe(true);
+      }
+    }
+  });
+
+  it("builds a PowerShell launcher with env, install fallback and quoting", async () => {
+    const { buildPs1 } = await import("../src/agents/terminal.js");
+    const [agent] = parseCatalog("It's Agent|itsagent,alt|itsagent --flag|npm install -g itsagent@latest|d|Coding|🔑|https://x");
+    const ps = buildPs1({ agent: agent!, args: ["it's"], env: { OPENAI_API_KEY: "tok'en" }, cwd: "C:\work" });
+    expect(ps).toContain("$env:OPENAI_API_KEY = 'tok''en'");
+    expect(ps).toContain("@('itsagent', 'alt')");
+    expect(ps).toContain("npm install -g itsagent@latest");
+    expect(ps).toContain("& $bin '--flag' 'it''s'");
+    expect(ps).toContain("Set-Location -LiteralPath 'C:\work'");
+  });
+});
