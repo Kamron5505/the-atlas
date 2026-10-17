@@ -19,6 +19,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "commander": "^15.0.0",
     "ink": "^8.0.0",
     "ink-gradient": "^4.0.1",
@@ -29,7 +30,19 @@
   "devDependencies": {
     "@the-atlas/core": "0.1.0"
   },
-  "keywords": ["ai", "cli", "llm", "openrouter", "gemini", "groq", "ollama", "omniroute", "free", "agents", "uzbek"],
+  "keywords": [
+    "ai",
+    "cli",
+    "llm",
+    "openrouter",
+    "gemini",
+    "groq",
+    "ollama",
+    "omniroute",
+    "free",
+    "agents",
+    "uzbek"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=22"
