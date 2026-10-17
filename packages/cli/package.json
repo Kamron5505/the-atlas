@@ -9,6 +9,7 @@
   "files": [
     "dist/",
     "agents.conf",
+    "agents.en.json",
     "README.md",
     "LICENSE"
   ],

@@ -4,6 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripEmoji as clean } from "../ui/theme.js";
 
 export type AuthClass = "free" | "browser" | "key" | "paid" | "none";
 
@@ -54,22 +55,40 @@ export function parseCatalog(text: string, custom = false): Agent[] {
   return out;
 }
 
-function bundledCatalogPath(): string {
-  // dist/index.js → ../agents.conf ; src/agents/catalog.ts → ../../agents.conf
+function bundled(file: string): string {
+  // dist/index.js → ../<file> ; src/agents/catalog.ts → ../../<file>
   const here = dirname(fileURLToPath(import.meta.url));
-  for (const p of [join(here, "..", "agents.conf"), join(here, "..", "..", "agents.conf")]) if (existsSync(p)) return p;
-  throw new Error("agents.conf not found");
+  for (const p of [join(here, "..", file), join(here, "..", "..", file)]) if (existsSync(p)) return p;
+  throw new Error(`${file} not found`);
+}
+
+
+/** Catalog text is Uzbek; other languages get the English translations (from Aidevix). */
+function localize(agents: Agent[], lang: string): Agent[] {
+  let en: Record<string, string> = {};
+  if (lang !== "uz") {
+    try {
+      en = JSON.parse(readFileSync(bundled("agents.en.json"), "utf8")) as Record<string, string>;
+    } catch {
+      // translations are optional
+    }
+  }
+  return agents.map((a) => {
+    const d = clean(a.description);
+    const auth = clean(a.auth);
+    return { ...a, description: en[d] ?? d, auth: en[auth] ?? auth };
+  });
 }
 
 /** Bundled catalog wins on duplicate names, so a user file can't silently swap a known installer. */
-export function loadAgents(): Agent[] {
-  const agents = parseCatalog(readFileSync(bundledCatalogPath(), "utf8"));
+export function loadAgents(lang = "uz"): Agent[] {
+  const agents = parseCatalog(readFileSync(bundled("agents.conf"), "utf8"));
   const userPath = join(atlasHome(), "agents.conf");
   if (existsSync(userPath)) {
     const known = new Set(agents.map((a) => a.name.toLowerCase()));
     for (const a of parseCatalog(readFileSync(userPath, "utf8"), true)) if (!known.has(a.name.toLowerCase())) agents.push(a);
   }
-  return agents;
+  return localize(agents, lang);
 }
 
 export function findAgent(agents: Agent[], query: string): Agent | undefined {

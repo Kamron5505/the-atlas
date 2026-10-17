@@ -2,10 +2,12 @@ import { configPath, listModels, loadConfig, readyProviders } from "@the-atlas/c
 import { execSync } from "node:child_process";
 import { which } from "./agents/catalog.js";
 
-const ok = (s: string) => `\x1b[32m✓\x1b[0m ${s}`;
-const warn = (s: string) => `\x1b[33m!\x1b[0m ${s}`;
-const bad = (s: string) => `\x1b[31m✗\x1b[0m ${s}`;
-const ms = (n: number) => `\x1b[${n < 300 ? 32 : n < 1000 ? 33 : 31}m${n} ms\x1b[0m`;
+import { a } from "./ui/ansi.js";
+
+const ok = (s: string) => `  ${a.ok("✓")} ${s}`;
+const warn = (s: string) => `  ${a.warn("!")} ${s}`;
+const bad = (s: string) => `  ${a.err("✗")} ${s}`;
+const ms = (n: number) => (n < 300 ? a.ok : n < 1000 ? a.warn : a.err)(`${n} ms`.padStart(7));
 
 const TOOL_HINT: Record<string, string> = {
   npm: "install Node.js 22+: https://nodejs.org",
@@ -27,7 +29,7 @@ function version(bin: string): string | undefined {
 }
 
 export async function doctor(): Promise<void> {
-  console.log("\x1b[1m◆ Environment\x1b[0m");
+  console.log(a.neon(a.bold("◆ Environment")));
   const major = Number(process.versions.node.split(".")[0]);
   console.log(major >= 22 ? ok(`node ${process.versions.node}`) : bad(`node ${process.versions.node} — need 22+`));
   const py = process.platform === "win32" ? "python" : "python3";
@@ -39,7 +41,7 @@ export async function doctor(): Promise<void> {
   }
   console.log(ok(`config ${configPath()}`));
 
-  console.log("\n\x1b[1m◆ Providers\x1b[0m");
+  console.log(`\n${a.neon(a.bold("◆ Providers"))}`);
   const cfg = loadConfig();
   const ready = readyProviders(cfg);
   if (!ready.length) console.log(warn("no providers — atlas keys add openrouter"));

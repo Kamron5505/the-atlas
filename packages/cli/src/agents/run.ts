@@ -7,9 +7,12 @@ import { createInterface } from "node:readline/promises";
 import { isRemoteScript, resolveInstall, which, type Agent } from "./catalog.js";
 import { loadState, recordUsage, saveState } from "./state.js";
 
-const gray = (s: string) => `\x1b[90m${s}\x1b[0m`;
-const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
-const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
+import { a } from "../ui/ansi.js";
+import { stripEmoji } from "../ui/theme.js";
+
+const gray = a.dim;
+const yellow = a.warn;
+const green = a.ok;
 
 export async function confirm(question: string, defaultYes = false): Promise<boolean> {
   if (!process.stdin.isTTY) return false;
@@ -46,8 +49,8 @@ export async function installAgent(agent: Agent, opts: { yes?: boolean } = {}): 
   }
   const install = resolveInstall(agent.install);
   console.log(`${agent.name} is not installed.\n  ${gray("$")} ${install}`);
-  if (isRemoteScript(install)) console.log(yellow("  ⚠ downloads and runs a remote install script"));
-  if (agent.custom) console.log(yellow("  ⚠ custom agent from your agents.conf — not verified by The Atlas"));
+  if (isRemoteScript(install)) console.log(yellow("  ! downloads and runs a remote install script"));
+  if (agent.custom) console.log(yellow("  ! custom agent from your agents.conf — not verified by The Atlas"));
   if (!opts.yes && !(await confirm("Install now?"))) return false;
 
   let code: number;
@@ -109,7 +112,7 @@ export async function launchAgent(agent: Agent, extraArgs: string[], opts: { yes
 
   const state = loadState();
   if (!state.seenAuth.includes(agent.name) && agent.auth && !opts.free) {
-    console.log(gray(`ℹ ${agent.name} login: ${agent.auth}${agent.url ? `\n  ${agent.url}` : ""}`));
+    console.log(gray(`· ${agent.name} login: ${stripEmoji(agent.auth)}${agent.url ? `\n  ${agent.url}` : ""}`));
     state.seenAuth.push(agent.name);
     saveState(state);
   }

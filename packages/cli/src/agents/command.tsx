@@ -1,7 +1,11 @@
 import type { Command } from "commander";
 import { render } from "ink";
 import { findAgent, loadAgents, which, type Agent } from "./catalog.js";
-import { AgentMenu, AUTH_BADGE, sortRows, type MenuResult, type MenuRow } from "./Menu.js";
+import { AgentMenu, AUTH_TAG, sortRows, type MenuResult, type MenuRow } from "./Menu.js";
+import { loadConfig } from "@the-atlas/core";
+import { detectLang, t } from "../i18n.js";
+import { a } from "../ui/ansi.js";
+import { stripEmoji } from "../ui/theme.js";
 import { installAgent, launchAgent } from "./run.js";
 import { loadState } from "./state.js";
 
@@ -12,21 +16,22 @@ function rowsFor(agents: Agent[]): MenuRow[] {
 
 function printList(rows: MenuRow[]): void {
   for (const r of rows) {
-    const b = AUTH_BADGE[r.agent.authClass];
-    const status = r.installed ? "\x1b[32m●\x1b[0m" : "\x1b[90m○\x1b[0m";
-    console.log(`${status} ${r.agent.name.padEnd(18)} ${b.icon}  ${r.agent.binary.padEnd(13)} ${r.agent.category.padEnd(7)} ${r.uses ? `${r.uses}×`.padEnd(4) : "    "} \x1b[90m${r.agent.description}\x1b[0m`);
+    const status = r.installed ? a.ok("●") : a.faint("○");
+    const uses = r.uses ? `${r.uses}×` : "";
+    console.log(`  ${status} ${a.text(r.agent.name.padEnd(18))} ${a.tag(AUTH_TAG[r.agent.authClass])}  ${a.dim(r.agent.binary.padEnd(13))} ${a.dim(r.agent.category.padEnd(7))} ${a.dim(uses.padEnd(4))} ${a.faint(stripEmoji(r.agent.description))}`);
   }
-  console.log("\x1b[90m🆓 free · 🔑 API key · 🌐 browser login · 💳 subscription\x1b[0m");
+  console.log(a.faint(`\n  ${a.tag("free")} free tier   ${a.tag("key")} API key   ${a.tag("login")} browser login   ${a.tag("paid")} subscription`));
 }
 
 export async function runAgentsMenu(opts: { free?: boolean; installed?: boolean; list?: boolean } = {}): Promise<void> {
-  let rows = rowsFor(loadAgents());
+  const lang = detectLang(loadConfig());
+  let rows = rowsFor(loadAgents(lang));
   if (opts.free) rows = rows.filter((r) => r.agent.authClass === "free");
   if (opts.installed) rows = rows.filter((r) => r.installed);
   if (opts.list || !process.stdin.isTTY) return printList(rows);
 
   let picked: MenuResult | null = null;
-  const app = render(<AgentMenu rows={rows} onPick={(r) => (picked = r)} />);
+  const app = render(<AgentMenu rows={rows} L={t(lang)} onPick={(r) => (picked = r)} />);
   await app.waitUntilExit();
   const choice = picked as MenuResult | null;
   if (!choice) return;

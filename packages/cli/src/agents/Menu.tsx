@@ -1,15 +1,19 @@
 import { Box, Text, useApp, useInput, useWindowSize } from "ink";
 import { useMemo, useState } from "react";
+import type { Dict } from "../i18n.js";
+import { C, I, stripEmoji, TAG_COLOR, tagText, type Tag } from "../ui/theme.js";
 import type { Agent, AuthClass } from "./catalog.js";
 import { ATLAS_READY } from "./run.js";
-import { C } from "../ui/theme.js";
 
-export const AUTH_BADGE: Record<AuthClass, { icon: string; color: string }> = {
-  free: { icon: "🆓", color: "green" },
-  browser: { icon: "🌐", color: "blue" },
-  key: { icon: "🔑", color: "yellow" },
-  paid: { icon: "💳", color: "magenta" },
-  none: { icon: "·", color: "gray" },
+
+// Typed or pasted text without control characters.
+const isPrintable = (s: string) => [...s].every((ch) => ch >= " " && ch !== "\u007f");
+export const AUTH_TAG: Record<AuthClass, Tag> = {
+  free: "free",
+  browser: "login",
+  key: "key",
+  paid: "paid",
+  none: "key",
 };
 
 export interface MenuRow {
@@ -32,7 +36,16 @@ export function sortRows(rows: MenuRow[]): MenuRow[] {
     .map((x) => x.r);
 }
 
-export function AgentMenu({ rows, onPick }: { rows: MenuRow[]; onPick: (r: MenuResult | null) => void }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Text wrap="truncate">
+      <Text color={C.dim}>{label.padEnd(10)}</Text>
+      {children}
+    </Text>
+  );
+}
+
+export function AgentMenu({ rows, L, onPick }: { rows: MenuRow[]; L: Dict; onPick: (r: MenuResult | null) => void }) {
   const { exit } = useApp();
   const { columns, rows: termRows } = useWindowSize();
   const [query, setQuery] = useState("");
@@ -44,12 +57,14 @@ export function AgentMenu({ rows, onPick }: { rows: MenuRow[]; onPick: (r: MenuR
     return q ? rows.filter((r) => `${r.agent.name} ${r.agent.binary} ${r.agent.category} ${r.agent.description}`.toLowerCase().includes(q)) : rows;
   }, [rows, query]);
 
-  const height = Math.max(5, Math.min(filtered.length, termRows - 8));
+  const height = Math.max(5, Math.min(filtered.length, termRows - 9));
   const pos = Math.min(cursor, Math.max(0, filtered.length - 1));
   const start = Math.max(0, Math.min(pos - Math.floor(height / 2), filtered.length - height));
   const visible = filtered.slice(start, start + height);
   const sel = filtered[pos];
-  const wide = columns >= 90;
+  const width = Math.max(40, Math.min(columns, 120));
+  const wide = width >= 96;
+  const nameW = 18;
 
   useInput((input, key) => {
     if (key.escape) {
@@ -60,16 +75,16 @@ export function AgentMenu({ rows, onPick }: { rows: MenuRow[]; onPick: (r: MenuR
       onPick({ agent: sel.agent, free });
       return exit();
     }
-    if (key.upArrow) return setCursor((c) => Math.max(0, Math.min(c, filtered.length - 1) - 1));
-    if (key.downArrow) return setCursor((c) => Math.min(filtered.length - 1, c + 1));
-    if (key.pageUp) return setCursor((c) => Math.max(0, c - height));
-    if (key.pageDown) return setCursor((c) => Math.min(filtered.length - 1, c + height));
+    if (key.upArrow) return setCursor(Math.max(0, pos - 1));
+    if (key.downArrow) return setCursor(Math.min(filtered.length - 1, pos + 1));
+    if (key.pageUp) return setCursor(Math.max(0, pos - height));
+    if (key.pageDown) return setCursor(Math.min(filtered.length - 1, pos + height));
     if (key.tab) return setFree((f) => !f);
     if (key.backspace || key.delete) {
       setQuery((q) => q.slice(0, -1));
       return setCursor(0);
     }
-    if (input && !key.ctrl && !key.meta && input >= " ") {
+    if (input && !key.ctrl && !key.meta && isPrintable(input)) {
       setQuery((q) => q + input);
       setCursor(0);
     }
@@ -78,80 +93,97 @@ export function AgentMenu({ rows, onPick }: { rows: MenuRow[]; onPick: (r: MenuR
   const installedCount = rows.filter((r) => r.installed).length;
 
   const list = (
-    <Box flexDirection="column" width={wide ? 38 : undefined}>
+    <Box flexDirection="column" width={wide ? 44 : undefined} borderStyle="round" borderColor={C.faint} paddingX={1}>
       {visible.map((r, i) => {
         const active = start + i === pos;
-        const b = AUTH_BADGE[r.agent.authClass];
+        const tag = AUTH_TAG[r.agent.authClass];
         return (
           <Text key={r.agent.name} wrap="truncate">
-            <Text color={active ? C.neon : C.faint}>{active ? "❯ " : "  "}</Text>
-            <Text color={r.installed ? C.ok : C.faint}>{r.installed ? "●" : "○"} </Text>
+            <Text color={active ? C.neon : C.faint}>{active ? `${I.pointer} ` : "  "}</Text>
+            <Text color={r.installed ? C.ok : C.faint}>{r.installed ? I.on : I.off} </Text>
             <Text bold={active} color={active ? C.text : C.user}>
-              {r.agent.name}
+              {r.agent.name.slice(0, nameW).padEnd(nameW)}
             </Text>
-            <Text> {b.icon}</Text>
-            {r.last && <Text color={C.glow}> ↩</Text>}
-            {r.uses > 0 && <Text color={C.dim}> {r.uses}×</Text>}
+            <Text color={TAG_COLOR[tag]}> {tagText(tag)}</Text>
+            <Text color={C.dim}>
+              {" "}
+              {r.last ? I.last : " "} {r.uses > 0 ? `${r.uses}×` : ""}
+            </Text>
           </Text>
         );
       })}
-      {filtered.length === 0 && <Text color={C.dim}>  —</Text>}
+      {filtered.length === 0 && <Text color={C.dim}>  {L.nothing}</Text>}
     </Box>
   );
 
   const details = sel && (
     <Box flexDirection="column" borderStyle="round" borderColor={C.neon} paddingX={1} flexGrow={1} marginLeft={wide ? 1 : 0}>
-      <Text bold color={C.neon}>
-        {sel.agent.name} <Text color={sel.installed ? C.ok : C.faint}>{sel.installed ? "● installed" : "○ not installed"}</Text>
-      </Text>
-      <Text>{sel.agent.description}</Text>
-      <Text> </Text>
-      <Text>
-        <Text color={C.dim}>command  </Text>
-        {sel.agent.command}
-      </Text>
-      <Text>
-        <Text color={C.dim}>group    </Text>
-        {sel.agent.category}
-      </Text>
-      <Text>
-        <Text color={C.dim}>login    </Text>
-        <Text color={AUTH_BADGE[sel.agent.authClass].color}>{sel.agent.auth || "—"}</Text>
-      </Text>
-      {sel.agent.url && (
-        <Text wrap="truncate">
-          <Text color={C.dim}>link     </Text>
-          <Text color={C.glow}>{sel.agent.url}</Text>
+      <Box justifyContent="space-between">
+        <Text bold color={C.neon}>
+          {sel.agent.name}
         </Text>
-      )}
-      {!sel.installed && sel.agent.install && (
-        <Text wrap="truncate">
-          <Text color={C.dim}>install  </Text>
-          {sel.agent.install}
+        <Text color={sel.installed ? C.ok : C.faint}>
+          {sel.installed ? I.on : I.off} {sel.installed ? L.installed : L.notInstalled}
         </Text>
+      </Box>
+      <Text color={C.user}>{stripEmoji(sel.agent.description)}</Text>
+      <Box flexDirection="column" marginTop={1}>
+        <Field label={L.aCommand}>
+          <Text color={C.text}>{sel.agent.command}</Text>
+        </Field>
+        <Field label={L.aGroup}>
+          <Text color={C.text}>{sel.agent.category}</Text>
+        </Field>
+        <Field label={L.aLogin}>
+          <Text color={TAG_COLOR[AUTH_TAG[sel.agent.authClass]]}>{stripEmoji(sel.agent.auth) || "—"}</Text>
+        </Field>
+        {sel.agent.url && (
+          <Field label={L.aLink}>
+            <Text color={C.blue}>{sel.agent.url}</Text>
+          </Field>
+        )}
+        {!sel.installed && sel.agent.install && (
+          <Field label={L.aInstall}>
+            <Text color={C.dim}>{sel.agent.install}</Text>
+          </Field>
+        )}
+      </Box>
+      {ATLAS_READY.has(sel.agent.binary) && (
+        <Box marginTop={1}>
+          <Text color={C.ok}>
+            {I.ok} {L.atlasReady}
+          </Text>
+        </Box>
       )}
-      {ATLAS_READY.has(sel.agent.binary) && <Text color={C.ok}>⚡ works with Atlas free models (Tab)</Text>}
     </Box>
   );
 
   return (
-    <Box flexDirection="column">
-      <Text>
-        <Text color={C.neon} bold>
-          ◆ ATLAS agents{" "}
+    <Box flexDirection="column" width={width}>
+      <Box justifyContent="space-between" paddingX={1}>
+        <Text>
+          <Text color={C.neon} bold>
+            {I.brand} {L.agentsTitle}
+          </Text>
+          <Text color={C.dim}>
+            {"  "}
+            {installedCount}/{rows.length} {L.installedN}
+          </Text>
         </Text>
-        <Text color={C.dim}>
-          {installedCount}/{rows.length} installed ·{" "}
+        <Text color={query ? C.text : C.faint}>
+          {I.pointer} {query || L.filter}
         </Text>
-        <Text color={C.glow}>🔎 {query || "type to search"}</Text>
-      </Text>
-      <Box flexDirection={wide ? "row" : "column"} marginTop={1}>
+      </Box>
+      <Box flexDirection={wide ? "row" : "column"}>
         {list}
         {details}
       </Box>
-      <Text color={C.dim}>
-        ↑↓ move · ⏎ launch · Tab {free ? <Text color={C.ok}>[⚡ Atlas free models ON]</Text> : "Atlas free models off"} · Esc quit · 🆓 free 🔑 key 🌐 login 💳 paid
-      </Text>
+      <Box justifyContent="space-between" paddingX={1}>
+        <Text color={C.faint}>{L.agentsNav} · esc</Text>
+        <Text color={free ? C.ok : C.faint}>
+          {free ? I.on : I.off} {free ? L.atlasOn : L.atlasOff}
+        </Text>
+      </Box>
     </Box>
   );
 }

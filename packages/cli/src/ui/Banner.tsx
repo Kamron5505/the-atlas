@@ -1,6 +1,7 @@
 import { Box, Text } from "ink";
 import Gradient from "ink-gradient";
-import { C, GRADIENT } from "./theme.js";
+import type { Dict } from "../i18n.js";
+import { C, GRADIENT, I } from "./theme.js";
 
 const LOGO = [
   " █████╗ ████████╗██╗      █████╗ ███████╗",
@@ -11,47 +12,39 @@ const LOGO = [
   "╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝",
 ].join("\n");
 
-const SMALL = "◆ A T L A S";
-
-export interface WelcomeInfo {
-  version: string;
-  tagline: string;
-  cwd: string;
-  connected: string[];
-  tips: string[];
-  columns: number;
-}
+const SMALL = `${I.brand} A T L A S`;
 
 /** Claude-style welcome: logo + framed card with status and tips. */
-export function Welcome({ version, tagline, cwd, connected, tips, columns }: WelcomeInfo) {
-  const wide = columns >= 48;
+export function Welcome({ L, version, cwd, connected, width }: { L: Dict; version: string; cwd: string; connected: string[]; width: number }) {
+  const row = (label: string, value: React.ReactNode) => (
+    <Text>
+      <Text color={C.dim}>{label.padEnd(7)}</Text>
+      {value}
+    </Text>
+  );
   return (
-    <Box flexDirection="column" marginBottom={1}>
+    <Box flexDirection="column" marginBottom={1} width={width}>
       <Gradient colors={GRADIENT}>
-        <Text>{wide ? LOGO : SMALL}</Text>
+        <Text>{width >= 48 ? LOGO : SMALL}</Text>
       </Gradient>
-      <Box flexDirection="column" borderStyle="round" borderColor={C.neon} paddingX={1} marginTop={1} width={Math.min(columns, 72)}>
+      <Box flexDirection="column" borderStyle="round" borderColor={C.neon} paddingX={1} marginTop={1}>
         <Text>
-          <Text color={C.neon}>✦ </Text>
+          <Text color={C.neon}>{I.star} </Text>
           <Text bold color={C.text}>
-            Welcome to The Atlas
+            {L.welcome}
           </Text>
-          <Text color={C.dim}> v{version}</Text>
+          <Text color={C.faint}>  v{version}</Text>
         </Text>
-        <Text color={C.dim}>{tagline}</Text>
-        <Text> </Text>
-        <Text color={C.dim}>
-          cwd: <Text color={C.user}>{cwd}</Text>
-        </Text>
-        <Text color={C.dim}>
-          AIs:{" "}
-          {connected.length ? <Text color={C.ok}>{connected.join(" · ")}</Text> : <Text color={C.warn}>none yet — type /connect</Text>}
-        </Text>
+        <Text color={C.dim}>{L.tagline}</Text>
+        <Box flexDirection="column" marginTop={1}>
+          {row(L.cwd, <Text color={C.user}>{cwd}</Text>)}
+          {row(L.ais, connected.length ? <Text color={C.ok}>{connected.join(" · ")}</Text> : <Text color={C.warn}>{L.noAis}</Text>)}
+        </Box>
       </Box>
-      <Box flexDirection="column" marginTop={1}>
-        {tips.map((tip, i) => (
+      <Box flexDirection="column" marginTop={1} paddingX={1}>
+        {L.tips.map((tip, i) => (
           <Text key={i} color={C.dim}>
-            <Text color={C.blue}> {i + 1}. </Text>
+            <Text color={C.blue}>{i + 1}  </Text>
             {tip}
           </Text>
         ))}

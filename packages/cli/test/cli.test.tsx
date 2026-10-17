@@ -8,6 +8,7 @@ import { classifyAuth, findAgent, loadAgents, parseCatalog } from "../src/agents
 import { AgentMenu, sortRows, type MenuRow } from "../src/agents/Menu.js";
 import { atlasWiring } from "../src/agents/run.js";
 import { Chat } from "../src/ui/Chat.js";
+import { t } from "../src/i18n.js";
 
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 const ENTER = "\r";
@@ -46,7 +47,7 @@ describe("agents menu", () => {
 
   it("filters by typing and launches with Enter", async () => {
     const onPick = vi.fn();
-    const ui = render(<AgentMenu rows={rows} onPick={onPick} />);
+    const ui = render(<AgentMenu rows={rows} L={t("en")} onPick={onPick} />);
     await tick();
     ui.stdin.write("bet");
     await tick();
@@ -101,6 +102,23 @@ describe("chat", () => {
     expect(ui.lastFrame()).toContain("/provider");
   });
 
+  it("arrow up recalls the previous message, esc clears input", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(sseBody("ok"), { status: 200 })));
+    const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: { groq: "k" }, order: ["groq"] };
+    const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="en" />);
+    await tick();
+    ui.stdin.write("first question");
+    await tick();
+    ui.stdin.write(ENTER);
+    await tick(150);
+    ui.stdin.write("[A");
+    await tick();
+    expect(ui.lastFrame()).toMatch(/› first question\s*│/);
+    ui.stdin.write("");
+    await tick(80);
+    expect(ui.lastFrame()).toContain("Ask anything");
+  });
+
   it("streams an answer with provider meta", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(sseBody("Salom!"), { status: 200 })));
     const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: { groq: "k" }, order: ["groq"] };
@@ -131,7 +149,7 @@ describe("chat", () => {
     await tick();
     ui.stdin.write(ENTER);
     await tick(120);
-    expect(ui.lastFrame()).toContain("free limit reached on groq");
+    expect(ui.lastFrame()).toContain("Free limit reached on groq");
     expect(ui.lastFrame()).toContain("Switch to Google Gemini");
     ui.stdin.write(ENTER);
     await tick(150);

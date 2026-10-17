@@ -16,6 +16,7 @@ import { randomBytes } from "node:crypto";
 import { detectLang, isLang, t } from "./i18n.js";
 import { readHidden } from "./prompt.js";
 import { Chat } from "./ui/Chat.js";
+import { a } from "./ui/ansi.js";
 import { registerAgents, runAgentsMenu } from "./agents/command.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "./system.js";
 import { Connect } from "./ui/Connect.js";
@@ -25,13 +26,7 @@ import { doctor } from "./doctor.js";
 declare const __VERSION__: string | undefined;
 const VERSION = typeof __VERSION__ === "string" ? __VERSION__ : "0.1.0";
 
-const c = {
-  gray: (s: string) => `\x1b[90m${s}\x1b[0m`,
-  green: (s: string) => `\x1b[32m${s}\x1b[0m`,
-  red: (s: string) => `\x1b[31m${s}\x1b[0m`,
-  cyan: (s: string) => `\x1b[36m${s}\x1b[0m`,
-  bold: (s: string) => `\x1b[1m${s}\x1b[0m`,
-};
+const c = { gray: a.dim, green: a.ok, red: a.err, cyan: a.neon, bold: a.bold };
 
 /**
  * Reads piped stdin. With idleMs > 0, gives up if nothing arrives in time:
@@ -90,7 +85,7 @@ program
   .action(async (id: string | undefined) => {
     const cfg = loadConfig();
     let msg: string | null = null;
-    const app = render(<Connect cfg={cfg} initial={id} onDone={(m) => ((msg = m), app.unmount())} />);
+    const app = render(<Connect cfg={cfg} L={t(detectLang(cfg))} initial={id} onDone={(m) => ((msg = m), app.unmount())} />);
     await app.waitUntilExit();
     if (msg) console.log(c.green(`✓ ${msg}`));
   });
@@ -213,9 +208,9 @@ program
     const L = t(detectLang(cfg));
     for (const def of PROVIDERS) {
       const p = resolveProvider(cfg, def.id)!;
-      const state = !def.keyRequired ? c.cyan(L.local) : p.apiKey ? c.green(`● ${L.ready}`) : c.gray(`○ ${L.noKey}`);
-      const price = def.free ? `🆓 ${L.free}` : `💳 ${L.paid}`;
-      console.log(`${def.id.padEnd(11)} ${def.name.padEnd(20)} ${price.padEnd(12)} ${state}  ${c.gray(def.signupUrl ?? "")}`);
+      const state = !def.keyRequired ? a.glow(`● ${L.local}`.padEnd(12)) : p.apiKey ? a.ok(`● ${L.ready}`.padEnd(12)) : a.faint(`○ ${L.noKey}`.padEnd(12));
+      const tag = a.tag(!def.keyRequired ? "local" : def.free ? "free" : "paid");
+      console.log(`  ${state} ${a.text(def.id.padEnd(11))} ${def.name.replace(/ \(local\)$/, "").padEnd(18)} ${tag}  ${a.faint(def.signupUrl ?? "")}`);
     }
   });
 
@@ -233,8 +228,9 @@ program
       let list = await listModels(p);
       if (opts.free) list = list.filter((m) => m.free);
       if (opts.json) return console.log(JSON.stringify(list, null, 2));
-      for (const m of list) console.log(`${m.free ? "🆓" : "💳"} ${id}/${m.id}${m.contextLength ? c.gray(`  ${Math.round(m.contextLength / 1000)}k`) : ""}`);
-      console.log(c.gray(`${list.length} models`));
+      const w = Math.min(60, Math.max(...list.map((m) => m.id.length + id.length + 1), 10));
+      for (const m of list) console.log(`  ${a.tag(m.free ? "free" : "paid")}  ${a.text(`${id}/${m.id}`.padEnd(w))}  ${m.contextLength ? a.dim(`${Math.round(m.contextLength / 1000)}k`) : ""}`);
+      console.log(a.dim(`  ${list.length} models`));
     } catch (err) {
       fail((err as Error).message);
     }

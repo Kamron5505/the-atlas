@@ -8,7 +8,7 @@ import { Connect } from "./Connect.js";
 import { Markdown } from "./Markdown.js";
 import { ModelPicker, type ModelChoice } from "./ModelPicker.js";
 import { Select, type SelectItem } from "./Select.js";
-import { C, SPARK } from "./theme.js";
+import { C, I, SPARK, type Tag } from "./theme.js";
 
 interface Entry {
   id: number;
@@ -21,17 +21,8 @@ type Overlay = null | { kind: "connect"; initial?: string } | { kind: "model" } 
 
 export type ChatExit = { kind: "quit" } | { kind: "agents" };
 
-const COMMANDS: { name: string; desc: string }[] = [
-  { name: "connect", desc: "connect an AI · opens its key page" },
-  { name: "model", desc: "choose a model from your AIs" },
-  { name: "agents", desc: "45+ AI coding agents (Aidevix)" },
-  { name: "provider", desc: "<id|auto> switch AI" },
-  { name: "omniroute", desc: "start local OmniRoute gateway" },
-  { name: "clear", desc: "clear the conversation" },
-  { name: "lang", desc: "uz | ru | en" },
-  { name: "help", desc: "all commands" },
-  { name: "exit", desc: "quit" },
-];
+const COMMANDS = ["connect", "model", "agents", "provider", "omniroute", "clear", "lang", "help", "exit"] as const;
+type CommandName = (typeof COMMANDS)[number];
 
 let nextId = 0;
 const entry = (kind: Entry["kind"], text: string, meta?: string): Entry => ({ id: nextId++, kind, text, meta });
@@ -78,28 +69,46 @@ export function Chat({
   const [slashIdx, setSlashIdx] = useState(0);
   const history = useRef<ChatMessage[]>(cfg.system ? [{ role: "system", content: cfg.system }] : []);
   const abort = useRef<AbortController | null>(null);
+  const sent = useRef<string[]>([]);
+  const histPos = useRef(-1);
   const tick = useTicker(streaming !== null);
 
   const push = (...e: Entry[]) => setLog((l) => [...l, ...e]);
   const slashOpen = overlay === null && streaming === null && input.startsWith("/") && !input.includes(" ");
-  const slashMatches = slashOpen ? COMMANDS.filter((c) => c.name.startsWith(input.slice(1).toLowerCase())) : [];
+  const slashMatches: CommandName[] = slashOpen ? COMMANDS.filter((c) => c.startsWith(input.slice(1).toLowerCase())) : [];
+  const width = Math.max(40, Math.min(columns, 110));
 
   const quit = (e: ChatExit = { kind: "quit" }) => {
     onExit?.(e);
     exit();
   };
 
+  const setInputMoveCursor = (v: string) => {
+    setInput(v);
+    setInputKey((k) => k + 1);
+  };
+
   useInput(
     (_ch, key) => {
-      if (key.escape && abort.current) abort.current.abort();
+      if (key.escape) {
+        if (abort.current) return abort.current.abort();
+        histPos.current = -1;
+        return setInputMoveCursor("");
+      }
       if (slashMatches.length) {
         if (key.upArrow) setSlashIdx((i) => Math.max(0, i - 1));
         if (key.downArrow) setSlashIdx((i) => Math.min(slashMatches.length - 1, i + 1));
-        if (key.tab) {
-          setInput(`/${slashMatches[Math.min(slashIdx, slashMatches.length - 1)]!.name}`);
-          setInputKey((k) => k + 1);
-        }
-        if (key.escape) setInput("");
+        if (key.tab) setInputMoveCursor(`/${slashMatches[Math.min(slashIdx, slashMatches.length - 1)]!} `);
+        return;
+      }
+      if (streaming !== null || !sent.current.length) return;
+      // Shell-like history of sent messages.
+      if (key.upArrow) {
+        histPos.current = Math.min(sent.current.length - 1, histPos.current + 1);
+        setInputMoveCursor(sent.current[sent.current.length - 1 - histPos.current]!);
+      } else if (key.downArrow) {
+        histPos.current = Math.max(-1, histPos.current - 1);
+        setInputMoveCursor(histPos.current < 0 ? "" : sent.current[sent.current.length - 1 - histPos.current]!);
       }
     },
     { isActive: overlay === null },
@@ -116,10 +125,10 @@ export function Chat({
   function command(line: string) {
     const [cmd = "", ...args] = line.slice(1).trim().split(/\s+/);
     const arg = args.join(" ");
-    const resolved = COMMANDS.find((c) => c.name === cmd.toLowerCase())?.name ?? cmd;
+    const resolved = COMMANDS.find((c) => c === cmd.toLowerCase()) ?? cmd;
     switch (resolved) {
       case "help":
-        return push(entry("info", L.help));
+        return push(entry("info", [...COMMANDS.map((c) => `/${c.padEnd(11)}${L.cmd[c]}`), "", L.help].join("\n")));
       case "exit":
       case "quit":
         return quit();
@@ -131,7 +140,7 @@ export function Chat({
         return setOverlay({ kind: "connect", initial: "omniroute" });
       case "clear":
         history.current = history.current.filter((m) => m.role === "system");
-        return push(entry("info", "✓ cleared"));
+        return push(entry("info", L.cleared));
       case "lang":
         if (!isLang(arg)) return push(entry("error", "uz | ru | en"));
         cfg.lang = arg;
@@ -141,14 +150,14 @@ export function Chat({
       case "provider":
         if (arg !== "auto" && !getProvider(arg)) return push(entry("error", L.providerUnknown));
         selectProvider(arg);
-        return push(entry("info", `✓ ${modelLabel(cfg, arg)}`));
+        return push(entry("info", `${I.ok} ${modelLabel(cfg, arg)}`));
       case "model": {
         if (!arg) return setOverlay({ kind: "model" });
         const slash = arg.indexOf("/");
         const pid = slash > 0 ? arg.slice(0, slash) : "";
         if (!getProvider(pid)) return push(entry("error", L.providerUnknown));
         selectProvider(pid, arg.slice(slash + 1));
-        return push(entry("info", `✓ ${arg}`));
+        return push(entry("info", `${I.ok} ${arg}`));
       }
       default:
         return push(entry("error", L.unknownCmd));
@@ -175,8 +184,8 @@ export function Chat({
           if (e.type === "provider") {
             meta = `${e.provider}/${e.model ?? "?"}`;
             setStatus(meta);
-          } else if (e.limited) push(entry("info", `${e.provider} ${L.switched} …`));
-          else push(entry("info", `${e.provider} ${L.fallback}`));
+          } else if (e.limited) push(entry("info", `${e.provider} · ${L.switched}`));
+          else push(entry("info", `${e.provider} · ${L.fallback}`));
         },
       })) {
         out += chunk;
@@ -187,7 +196,7 @@ export function Chat({
     } catch (err) {
       if (ctrl.signal.aborted) {
         if (out) history.current.push({ role: "assistant", content: out });
-        push(entry("assistant", `${out}\n${L.cancelled}`, meta));
+        push(entry("assistant", out || "…", `${meta} · ${L.cancelled}`));
       } else if (err instanceof RouteError && err.limited) {
         // Keep the user message; retry after they pick another AI/model.
         push(entry("error", err.errors.map((e) => e.message).join("\n")));
@@ -205,10 +214,12 @@ export function Chat({
 
   function submit(value: string) {
     let text = value.trim();
-    if (slashMatches.length && text.startsWith("/") && !text.includes(" ")) text = `/${slashMatches[Math.min(slashIdx, slashMatches.length - 1)]!.name}`;
+    if (slashMatches.length && text.startsWith("/") && !text.includes(" ")) text = `/${slashMatches[Math.min(slashIdx, slashMatches.length - 1)]!}`;
     setInput("");
     setSlashIdx(0);
+    histPos.current = -1;
     if (!text || streaming !== null) return;
+    if (sent.current.at(-1) !== text) sent.current.push(text);
     if (text.startsWith("/")) return command(text);
     void send(text);
   }
@@ -216,10 +227,16 @@ export function Chat({
   function limitItems(failed: string): SelectItem<string>[] {
     const others = readyProviders(cfg).filter((p) => p.def.id !== failed);
     return [
-      ...others.slice(0, 6).map((p) => ({ key: p.def.id, label: `${L.switchTo} ${p.def.name}`, value: `p:${p.def.id}`, hint: p.model, badge: p.def.free ? "🆓" : "💳" })),
-      { key: "auto", label: L.useAuto, value: "auto", badge: "⚡" },
-      { key: "model", label: L.chooseModel, value: "model" },
-      { key: "connect", label: L.connectAnother, value: "connect" },
+      ...others.slice(0, 6).map((p) => ({
+        key: p.def.id,
+        label: `${L.switchTo} ${p.def.name.replace(/ \(local\)$/, "")}`,
+        value: `p:${p.def.id}`,
+        hint: p.model,
+        tag: (p.def.keyRequired ? (p.def.free ? "free" : "paid") : "local") as Tag,
+      })),
+      { key: "auto", label: L.useAuto, value: "auto", tag: "auto" as Tag },
+      { key: "model", label: `${L.chooseModel} …`, value: "model" },
+      { key: "connect", label: `${L.connectAnother} …`, value: "connect" },
     ];
   }
 
@@ -229,39 +246,47 @@ export function Chat({
   const shimmer = [C.neon, C.glow, C.neon, C.blue][Math.floor(tick / 3) % 4];
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" width={width}>
       <Static items={log}>
         {(e) => (
           <Box key={e.id} flexDirection="column" marginBottom={e.kind === "welcome" ? 0 : 1}>
             {e.kind === "welcome" && (
-              <Welcome
-                version={version}
-                tagline={L.tagline}
-                cwd={process.cwd()}
-                connected={ready.filter((p) => p.def.keyRequired).map((p) => p.def.name)}
-                tips={L.tips}
-                columns={columns}
-              />
+              <Welcome L={L} version={version} cwd={process.cwd()} connected={ready.filter((p) => p.def.keyRequired).map((p) => p.def.name)} width={width} />
             )}
             {e.kind === "user" && (
               <Box>
-                <Text color={C.dim}>{"> "}</Text>
+                <Text color={C.dim}>{`${I.prompt} `}</Text>
                 <Text color={C.user}>{e.text}</Text>
               </Box>
             )}
             {e.kind === "assistant" && (
               <Box flexDirection="column">
                 <Box>
-                  <Text color={C.neon}>⏺ </Text>
+                  <Text color={C.neon}>{`${I.reply} `}</Text>
                   <Box flexDirection="column" flexGrow={1}>
                     <Markdown text={e.text} />
                   </Box>
                 </Box>
-                {e.meta && <Text color={C.faint}>  ⎿ {e.meta}</Text>}
+                {e.meta && (
+                  <Text color={C.faint}>
+                    {"  "}
+                    {I.sub} {e.meta}
+                  </Text>
+                )}
               </Box>
             )}
-            {e.kind === "info" && <Text color={C.dim}>  ⎿ {e.text}</Text>}
-            {e.kind === "error" && <Text color={C.err}>  ⎿ ✗ {e.text}</Text>}
+            {e.kind === "info" && (
+              <Text color={C.dim}>
+                {"  "}
+                {I.sub} {e.text}
+              </Text>
+            )}
+            {e.kind === "error" && (
+              <Text color={C.err}>
+                {"  "}
+                {I.sub} {I.fail} {e.text}
+              </Text>
+            )}
           </Box>
         )}
       </Static>
@@ -270,7 +295,7 @@ export function Chat({
         <Box flexDirection="column" marginBottom={1}>
           {streaming && (
             <Box>
-              <Text color={C.neon}>⏺ </Text>
+              <Text color={C.neon}>{`${I.reply} `}</Text>
               <Box flexDirection="column" flexGrow={1}>
                 <Markdown text={streaming} />
               </Box>
@@ -290,11 +315,12 @@ export function Chat({
       {overlay?.kind === "connect" && (
         <Connect
           cfg={cfg}
+          L={L}
           initial={overlay.initial}
           onDone={(msg, pid) => {
             setOverlay(null);
             if (msg) {
-              push(entry("info", `✓ ${msg}`));
+              push(entry("info", `${I.ok} ${msg}`));
               if (pid && provider !== "auto") selectProvider(pid);
             }
           }}
@@ -303,18 +329,21 @@ export function Chat({
       {overlay?.kind === "model" && (
         <ModelPicker
           cfg={cfg}
+          L={L}
           onDone={(c: ModelChoice | null) => {
             setOverlay(null);
             if (c) {
               selectProvider(c.provider, c.model);
-              push(entry("info", `✓ ${modelLabel(cfg, c.provider, c.model)}`));
+              push(entry("info", `${I.ok} ${modelLabel(cfg, c.provider, c.model)}`));
             }
           }}
         />
       )}
       {overlay?.kind === "limit" && (
         <Select
-          title={`⚠ ${L.limitTitle} ${overlay.provider}`}
+          L={L}
+          tone={C.warn}
+          title={`${I.warn} ${L.limitTitle} ${overlay.provider}`}
           items={limitItems(overlay.provider)}
           filterable={false}
           onCancel={() => setOverlay(null)}
@@ -325,7 +354,7 @@ export function Chat({
             setOverlay(null);
             const pid = it.value === "auto" ? "auto" : it.value.slice(2);
             selectProvider(pid);
-            push(entry("info", `✓ ${modelLabel(cfg, pid)}`));
+            push(entry("info", `${I.ok} ${modelLabel(cfg, pid)}`));
             // Re-ask the same question on the new AI.
             void send(retry, false, { provider: pid });
           }}
@@ -335,7 +364,7 @@ export function Chat({
       {overlay === null && (
         <>
           <Box borderStyle="round" borderColor={streaming !== null ? C.faint : C.neon} paddingX={1}>
-            <Text color={streaming !== null ? C.faint : C.neon}>{"> "}</Text>
+            <Text color={streaming !== null ? C.faint : C.neon}>{`${I.prompt} `}</Text>
             <TextInput
               key={inputKey}
               value={input}
@@ -351,11 +380,12 @@ export function Chat({
           {slashMatches.length > 0 ? (
             <Box flexDirection="column" paddingX={2}>
               {slashMatches.map((c, i) => (
-                <Text key={c.name}>
+                <Text key={c}>
+                  <Text color={i === slashIdx ? C.neon : C.faint}>{i === slashIdx ? `${I.pointer} ` : "  "}</Text>
                   <Text color={i === slashIdx ? C.neon : C.user} bold={i === slashIdx}>
-                    /{c.name.padEnd(11)}
+                    /{c.padEnd(11)}
                   </Text>
-                  <Text color={C.dim}>{c.desc}</Text>
+                  <Text color={C.dim}>{L.cmd[c]}</Text>
                 </Text>
               ))}
             </Box>
@@ -363,7 +393,8 @@ export function Chat({
             <Box paddingX={2} justifyContent="space-between">
               <Text color={C.faint}>{L.shortcuts}</Text>
               <Text color={C.neon}>
-                ◆ {provider === "auto" ? `auto ⇄ ${ready.map((p) => p.def.id).slice(0, 3).join(" → ") || "—"}` : modelLabel(cfg, provider, model)}
+                {I.brand}{" "}
+                {provider === "auto" ? `auto ${I.swap} ${ready.map((p) => p.def.id).slice(0, 3).join(` ${I.arrow} `) || "—"}` : modelLabel(cfg, provider, model)}
               </Text>
             </Box>
           )}
