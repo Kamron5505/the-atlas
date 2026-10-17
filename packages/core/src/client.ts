@@ -135,7 +135,13 @@ export async function* streamChat(p: ResolvedProvider, messages: ChatMessage[], 
   });
   opts.onResponse?.(p.def.id, res.headers);
   if (!res.body) throw new ProviderError(`${p.def.name}: empty response`, p.def.id, 502);
-  yield* parseSSE(res.body);
+  try {
+    yield* parseSSE(res.body);
+  } catch (err) {
+    if ((err as Error).name === "AbortError" || err instanceof ProviderError) throw err;
+    // In-stream errors ("upstream overloaded") count as 503: the router tries another model.
+    throw new ProviderError(`${p.def.name}: ${(err as Error).message}`, p.def.id, 503);
+  }
 }
 
 export async function listModels(p: ResolvedProvider, signal?: AbortSignal): Promise<ModelInfo[]> {
@@ -247,7 +253,8 @@ export async function* streamChatTools(
   let finishReason: string | undefined;
   for await (const json of parseSSEChunks(res.body)) {
     const err = json.error as { message?: string } | string | undefined;
-    if (err) throw new ProviderError(`${p.def.name}: ${typeof err === "string" ? err : (err.message ?? "stream error")}`, p.def.id);
+    // In-stream errors ("upstream overloaded") count as 503: try another model.
+    if (err) throw new ProviderError(`${p.def.name}: ${typeof err === "string" ? err : (err.message ?? "stream error")}`, p.def.id, 503);
     const choice = (json.choices as { delta?: { content?: string | null; tool_calls?: ToolDelta[] }; finish_reason?: string | null }[] | undefined)?.[0];
     if (!choice) continue;
     if (choice.finish_reason) finishReason = choice.finish_reason;

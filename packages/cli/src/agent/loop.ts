@@ -2,6 +2,7 @@ import { routeAgentStep, type AtlasConfig, type ChatMessage, type ToolCall, type
 import type { Lang } from "../i18n.js";
 import { visible, type BuiltinTool } from "./tools.js";
 import type { AgentTool, ApprovalAnswer, ApprovalRequest, ToolResult } from "./types.js";
+import { AGENT_STYLE, ATLAS_PERSONA } from "../persona.js";
 
 /** Progress events for the UI. */
 export type AgentEvent =
@@ -54,12 +55,14 @@ const LANG_NAME: Record<Lang, string> = { uz: "Uzbek", ru: "Russian", en: "Engli
 export function agentSystemPrompt(cwd: string, lang: Lang): string {
   const os = process.platform === "win32" ? "Windows (shell: PowerShell 5.1 — no && / ||, use ;)" : process.platform === "darwin" ? "macOS (bash)" : "Linux (bash)";
   return [
-    "You are Atlas agent, a coding assistant working directly in the user's project through tools.",
+    ATLAS_PERSONA,
+    "You are now in agent mode: a coding assistant working directly in the user's project through tools.",
     `OS: ${os}. Project folder (cwd): ${cwd}. All paths are relative to it; you cannot touch files outside it or secret files.`,
     "Use the tools to inspect and change the project instead of guessing. Read a file before editing it; prefer edit_file with a unique old_string over rewriting whole files.",
     "Run commands (tests, builds) to verify your changes when useful. Keep tool calls focused; do not run servers or interactive programs.",
     "If the user declines a tool call, do not retry it; adapt or ask.",
-    `When done, reply briefly with what you changed. Answer in the user's language (default: ${LANG_NAME[lang]}).`,
+    AGENT_STYLE,
+    `Answer in the user's language (default: ${LANG_NAME[lang]}).`,
   ].join("\n");
 }
 

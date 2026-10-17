@@ -201,9 +201,10 @@ describe("free-model fallback (OpenRouter) and silent local skip", () => {
     cfg.models.openrouter = "gone/old:free";
     const events: RouteEvent[] = [];
     const out = await collect(routeChat(cfg, [{ role: "user", content: "hi" }], { onEvent: (e) => events.push(e) }));
-    expect(tried).toEqual(["gone/old:free", "openrouter/free"]);
-    expect(out).toBe("hi from openrouter/free");
-    expect(events.filter((e) => e.type === "fallback").map((e) => e.provider)).toEqual(["openrouter"]);
+    // chosen (404) → vetted free chat models; safety classifiers never; router stays last.
+    expect(tried).toEqual(["gone/old:free", "busy/model:free", "good/model:free"]);
+    expect(out).toBe("hi from good/model:free");
+    expect(events.filter((e) => e.type === "fallback").map((e) => e.model)).toEqual(["gone/old:free", "busy/model:free"]);
   });
 
   it("does not try other models on a non-model error (401 bad key)", async () => {
@@ -228,7 +229,7 @@ describe("free-model fallback when the router itself is busy", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("default router 429 → next free model answers", async () => {
+  it("busy free model → next free model answers; busy one is skipped next time", async () => {
     const tried: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -244,6 +245,37 @@ describe("free-model fallback when the router itself is busy", () => {
     );
     const out = await collect(routeChat(cfgWith({ openrouter: "k" }, ["openrouter"]), [{ role: "user", content: "hi" }], { provider: "openrouter" }));
     expect(out).toBe("ok");
-    expect(tried).toEqual(["openrouter/free", "busy/model:free", "good/model:free"]);
+    expect(tried).toEqual(["busy/model:free", "good/model:free"]);
+    // The busy model is remembered: the next request skips it.
+    tried.length = 0;
+    await collect(routeChat(cfgWith({ openrouter: "k" }, ["openrouter"]), [{ role: "user", content: "again" }], { provider: "openrouter" }));
+    expect(tried).toEqual(["good/model:free"]);
+  });
+});
+
+describe("in-stream upstream errors", () => {
+  beforeEach(async () => {
+    process.env.ATLAS_HOME = mkdtempSync(join(tmpdir(), "atlas-route3-"));
+    (await import("../src/models.js")).clearModelCaches();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("an error event before the first token moves on to the next free model", async () => {
+    const tried: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/models")) {
+          return new Response(JSON.stringify({ data: [{ id: "big/ultra-550b:free", pricing: { prompt: "0", completion: "0" } }, { id: "ok/model-70b:free", pricing: { prompt: "0", completion: "0" } }] }), { status: 200 });
+        }
+        const model = (JSON.parse(String(init!.body)) as { model: string }).model;
+        tried.push(model);
+        if (model === "big/ultra-550b:free") return new Response(sse([`data: ${JSON.stringify({ error: { message: "Upstream error from Nvidia: Service temporarily overloaded" } })}`]), { status: 200 });
+        return new Response(sse([delta("fine"), "data: [DONE]"]), { status: 200 });
+      }),
+    );
+    const out = await collect(routeChat(cfgWith({ openrouter: "k" }, ["openrouter"]), [{ role: "user", content: "hi" }], { provider: "openrouter" }));
+    expect(out).toBe("fine");
+    expect(tried).toEqual(["big/ultra-550b:free", "ok/model-70b:free"]);
   });
 });

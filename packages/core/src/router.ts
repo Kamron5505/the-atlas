@@ -1,6 +1,6 @@
 import { readyProviders, resolveProvider, type AtlasConfig, type ResolvedProvider } from "./config.js";
 import { ProviderError, streamChat, streamChatTools, type ChatMessage, type ChatOptions, type ToolSpec, type ToolStreamEvent } from "./client.js";
-import { cachedModels, freeChatModels, reachable } from "./models.js";
+import { cachedModels, freeChatModels, isBusy, markBusy, reachable } from "./models.js";
 
 /** Every candidate failed; `limited` = at least one hit its free limit. */
 export class RouteError extends Error {
@@ -29,7 +29,7 @@ export interface RouteOptions extends ChatOptions {
 }
 
 /** How many extra free models of the same provider to try before moving on. */
-const MODEL_RETRIES = 2;
+const MODEL_RETRIES = 3;
 
 export function candidates(cfg: AtlasConfig, provider: string): ResolvedProvider[] {
   if (provider !== "auto") {
@@ -52,20 +52,21 @@ async function modelsToTry(p: ResolvedProvider, explicit: string | undefined, si
   const first = explicit ?? p.model;
   const needList = !first || !!p.def.freeModelFilter;
   const list = needList ? await cachedModels(p, signal) : [];
-  const out: string[] = [];
-  if (first) out.push(first);
-  else {
-    const pick = freeChatModels(list)[0] ?? list[0];
-    if (pick) out.push(pick.id);
+  if (!p.def.freeModelFilter) {
+    const pick = first ?? (freeChatModels(list)[0] ?? list[0])?.id;
+    return pick ? [pick] : [];
   }
-  if (p.def.freeModelFilter) {
-    // The provider's own default (e.g. the openrouter/free router) is the best second try.
-    const backups = [p.def.defaultModel, ...freeChatModels(list).map((m) => m.id)];
-    for (const id of backups) {
-      if (out.length > MODEL_RETRIES) break;
-      if (id && !out.includes(id)) out.push(id);
-    }
-  }
+  // Free-model providers (OpenRouter): a chosen model first, then vetted free chat
+  // models, and the provider's router (openrouter/free) LAST — it sometimes picks
+  // non-chat models such as safety classifiers. Recently busy models are skipped.
+  const router = p.def.defaultModel;
+  const chosen = first && first !== router ? first : undefined;
+  const pool = [chosen, ...freeChatModels(list).map((m) => m.id)].filter((id): id is string => !!id);
+  const fresh = [...new Set(pool)].filter((id) => !isBusy(p.def.id, id));
+  const out = fresh.slice(0, MODEL_RETRIES + 1);
+  if (router && !out.includes(router)) out.push(router);
+  // Everything is cooling down: still try the chosen model rather than nothing.
+  if (!out.length && pool[0]) out.push(pool[0]);
   return out;
 }
 
@@ -101,6 +102,7 @@ export async function* routeChat(cfg: AtlasConfig, messages: ChatMessage[], opts
       } catch (err) {
         if (started || !(err instanceof ProviderError) || !err.retryable) throw err;
         errors.push(err);
+        if (err.status === 429 || err.status === 503) markBusy(p.def.id, model);
         const lastHere = i === models.length - 1 || !modelLevel(err);
         opts.onEvent?.({ type: "fallback", provider: p.def.id, model, error: err.message, limited: err.limited });
         if (lastHere) break;

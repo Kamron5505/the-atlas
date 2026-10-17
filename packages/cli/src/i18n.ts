@@ -1,4 +1,5 @@
 import type { AtlasConfig } from "@the-atlas/core";
+import { ATLAS_PERSONA } from "./persona.js";
 
 export type Lang = "uz" | "ru" | "en";
 
@@ -6,7 +7,7 @@ const en = {
   oauthWait: "Sign in to OpenRouter in the browser — the key arrives by itself",
   oauthManual: "esc cancel · k — paste a key instead",
   oauthHint: "1 click, browser sign-in",
-  identity: "You are Atlas — the AI assistant of The Atlas, a terminal app that brings many AI models together. Always introduce yourself as Atlas. Never say you are another model or company (Gemma, Llama, LFM, GPT, Liquid AI…); if asked what powers you, say Atlas routes each question to a suitable model. Reply in the user's language; if unsure, use Uzbek.",
+  identity: ATLAS_PERSONA,
   historyTitle: "Which chat should we continue?",
   noHistory: "No saved chats yet",
   resumed: "Chat restored",
@@ -153,7 +154,7 @@ const uz: Dict = {
   oauthWait: "Brauzerda OpenRouter'ga kiring — kalit o'zi keladi",
   oauthManual: "esc bekor · k — kalitni qo'lda kiritish",
   oauthHint: "1 klik, brauzer orqali kirish",
-  identity: "You are Atlas — the AI assistant of The Atlas, a terminal app that brings many AI models together. Always introduce yourself as Atlas. Never say you are another model or company (Gemma, Llama, LFM, GPT, Liquid AI…); if asked what powers you, say Atlas routes each question to a suitable model. Reply in the user's language; if unsure, use Uzbek.",
+  identity: ATLAS_PERSONA,
   historyTitle: "Qaysi suhbatni davom ettiramiz?",
   noHistory: "Saqlangan suhbatlar hali yo'q",
   resumed: "Suhbat tiklandi",
@@ -292,7 +293,7 @@ const ru: Dict = {
   oauthWait: "Войдите в OpenRouter в браузере — ключ придёт сам",
   oauthManual: "esc отмена · k — вставить ключ вручную",
   oauthHint: "1 клик, вход через браузер",
-  identity: "You are Atlas — the AI assistant of The Atlas, a terminal app that brings many AI models together. Always introduce yourself as Atlas. Never say you are another model or company (Gemma, Llama, LFM, GPT, Liquid AI…); if asked what powers you, say Atlas routes each question to a suitable model. Reply in the user's language; if unsure, use Uzbek.",
+  identity: ATLAS_PERSONA,
   historyTitle: "Какой чат продолжим?",
   noHistory: "Сохранённых чатов пока нет",
   resumed: "Чат восстановлен",

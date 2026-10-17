@@ -60,13 +60,65 @@ export async function reachable(p: ResolvedProvider): Promise<boolean> {
   return up;
 }
 
+const COOLDOWN_MS = 10 * 60 * 1000;
+const cooldownFile = () => join(atlasHome(), "cache", "cooldown.json");
+let cooling: Record<string, number> | undefined;
+
+function loadCooling(): Record<string, number> {
+  if (cooling) return cooling;
+  try {
+    cooling = existsSync(cooldownFile()) ? (JSON.parse(readFileSync(cooldownFile(), "utf8")) as Record<string, number>) : {};
+  } catch {
+    cooling = {};
+  }
+  return cooling;
+}
+
+/** Remember that a model answered 429/503 so the next requests (also in new processes) skip it for 10 min. */
+export function markBusy(provider: string, model: string): void {
+  const c = loadCooling();
+  const now = Date.now();
+  for (const [k, until] of Object.entries(c)) if (until < now) delete c[k];
+  c[`${provider}/${model}`] = now + COOLDOWN_MS;
+  try {
+    mkdirSync(join(atlasHome(), "cache"), { recursive: true });
+    writeFileSync(cooldownFile(), JSON.stringify(c));
+  } catch {
+    // best-effort
+  }
+}
+
+export function isBusy(provider: string, model: string): boolean {
+  return (loadCooling()[`${provider}/${model}`] ?? 0) > Date.now();
+}
+
 /** Text chat models that are free on this provider (skips safety classifiers / media models). */
 export function freeChatModels(models: ModelInfo[]): ModelInfo[] {
-  return models.filter((m) => m.free && m.id.endsWith(":free") && !/safety|guard|embed|tts|whisper|lyria|image/i.test(m.id));
+  return models
+    .filter((m) => m.free && m.id.endsWith(":free") && !/safety|guard|embed|tts|whisper|lyria|image|vl\b|omni|ocr/i.test(m.id))
+    .sort((a, b) => qualityScore(b) - qualityScore(a));
+}
+
+/**
+ * Rough answer-quality rank from the model id: bigger and "super/ultra/pro" first,
+ * tiny ("nano", "mini", 2–4B) last — small free models often answer with gibberish.
+ */
+export function qualityScore(m: ModelInfo): number {
+  const id = m.id.toLowerCase();
+  // Total parameter count in billions, e.g. "120b-a12b" → 120, "gemma-4-31b" → 31.
+  const sizes = [...id.matchAll(/(?<![a-z])(\d+(?:\.\d+)?)b(?![a-z])/g)].map((x) => Number(x[1]));
+  const size = sizes.length ? Math.max(...sizes) : 0;
+  let score = size ? Math.log2(size + 1) * 10 : 30;
+  if (/\b(ultra|super|large|pro|maverick)\b/.test(id)) score += 25;
+  if (/\b(nano|mini|small|xs|lite|tiny|lightning|micro)\b/.test(id)) score -= 30;
+  if (size && size < 8) score -= 20;
+  score += Math.min(10, (m.contextLength ?? 0) / 100_000);
+  return score;
 }
 
 /** Test hook. */
 export function clearModelCaches(): void {
   mem.clear();
   alive.clear();
+  cooling = undefined;
 }
