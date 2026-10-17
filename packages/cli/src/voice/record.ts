@@ -211,6 +211,8 @@ export interface RecordOptions {
   maxSeconds?: number;
   /** Mic level 0..1, ~10 times per second. */
   onLevel?: (level: number) => void;
+  /** OS whose device listing / ffmpeg input to use (default: this one; tests pin it). */
+  platform?: NodeJS.Platform;
 }
 
 export interface Recording {
@@ -227,8 +229,8 @@ export interface Recording {
 /** dB (RMS) → 0..1 meter value, -60 dB = silence. */
 export const levelFromDb = (db: number) => (Number.isFinite(db) ? Math.min(1, Math.max(0, (db + 60) / 60)) : 0);
 
-async function resolveDevice(query?: string): Promise<AudioDevice> {
-  const devices = await listInputDevices();
+async function resolveDevice(query?: string, platform: NodeJS.Platform = process.platform): Promise<AudioDevice> {
+  const devices = await listInputDevices(platform);
   // An explicit --device that matches nothing must not silently record from another mic.
   if (query) {
     const dev = matchDevice(devices, query);
@@ -245,10 +247,11 @@ async function resolveDevice(query?: string): Promise<AudioDevice> {
 export async function startRecording(opts: RecordOptions = {}): Promise<Recording> {
   const bin = requireFfmpeg();
   const maxSeconds = opts.maxSeconds ?? 120;
-  const device = await resolveDevice(opts.device);
+  const platform = opts.platform ?? process.platform;
+  const device = await resolveDevice(opts.device, platform);
   // Private 0700 dir: a predictable name in a shared /tmp could be pre-planted as a symlink.
   const file = join(mkdtempSync(join(tmpdir(), TMP_PREFIX)), "voice.wav");
-  const child = spawn(bin, ffmpegArgs(process.platform, device, file, maxSeconds), {
+  const child = spawn(bin, ffmpegArgs(platform, device, file, maxSeconds), {
     stdio: ["pipe", "ignore", "pipe"],
     windowsHide: true,
   });

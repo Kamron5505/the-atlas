@@ -188,7 +188,7 @@ describe("startRecording", () => {
       setTimeout(() => child.stderr.emit("data", Buffer.from("[Parsed_ametadata_1 @ 0] lavfi.astats.Overall.RMS_level=-30.0\n")), 5);
     });
     const levels: number[] = [];
-    const rec = await startRecording({ onLevel: (l) => levels.push(l) });
+    const rec = await startRecording({ platform: "win32", onLevel: (l) => levels.push(l) });
     expect(rec.device.name).toBe("Stereo Mix (Realtek Audio)");
     expect(recArgs).toContain("audio=Stereo Mix (Realtek Audio)");
     await tick(400);
@@ -206,7 +206,7 @@ describe("startRecording", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     try {
       fakeFfmpeg(NEW_FORMAT, (child) => child.stdin.write.mockImplementation(() => true));
-      const p = startRecording();
+      const p = startRecording({ platform: "win32" });
       await vi.advanceTimersByTimeAsync(10);
       const rec = await p;
       await vi.advanceTimersByTimeAsync(1000);
@@ -222,7 +222,7 @@ describe("startRecording", () => {
 
   it("records into a private temp dir, removed on cancel; survives EPIPE on stdin", async () => {
     fakeFfmpeg(NEW_FORMAT);
-    const rec = await startRecording();
+    const rec = await startRecording({ platform: "win32" });
     const out = spawnMock.mock.calls.at(-1)![1].at(-1) as string;
     expect(dirname(dirname(out))).toBe(tmpdir());
     expect(basename(dirname(out))).toMatch(/^atlas-voice-/);
@@ -238,18 +238,18 @@ describe("startRecording", () => {
     delete process.env.ATLAS_FFMPEG;
     process.env.PATH = "";
     process.env.LOCALAPPDATA = join(home, "none");
-    const noBin = (await startRecording().catch((e: unknown) => e)) as VoiceError;
+    const noBin = (await startRecording({ platform: "win32" }).catch((e: unknown) => e)) as VoiceError;
     expect(noBin.code).toBe("noFfmpeg");
     expect(voiceError(noBin, voiceT("uz"))).toMatch(/ffmpeg.*(winget|brew|apt)/);
     process.env.ATLAS_FFMPEG = "ffmpeg-fake";
     fakeFfmpeg("dummy: Immediate exit requested");
-    const noDev = (await startRecording().catch((e: unknown) => e)) as VoiceError;
+    const noDev = (await startRecording({ platform: "win32" }).catch((e: unknown) => e)) as VoiceError;
     expect(noDev.code).toBe("noDevice");
   });
 
   it("an explicit device that matches nothing fails instead of recording another mic", async () => {
     fakeFfmpeg(OLD_FORMAT);
-    const err = (await startRecording({ device: "7" }).catch((e: unknown) => e)) as VoiceError;
+    const err = (await startRecording({ platform: "win32", device: "7" }).catch((e: unknown) => e)) as VoiceError;
     expect(err.code).toBe("noDevice");
     expect(spawnMock.mock.calls.some(([, args]) => !(args as string[]).includes("-list_devices"))).toBe(false);
   });
