@@ -1,37 +1,55 @@
 # ◆ The Atlas
 
-**All AI assistants in one terminal.** Chat with free-tier models (OpenRouter, Gemini, Groq, Cerebras, Mistral, GitHub Models, NVIDIA, SambaNova, OmniRoute, Ollama) with automatic fallback, and launch 45+ AI coding agents — optionally running them on those free models.
+**All AI assistants in one terminal.** Free models with automatic switching, 47 AI coding agents, agent mode, MCP tools and voice input.
 
 ```bash
-npm i -g the-atlas
-atlas keys add openrouter     # free key: https://openrouter.ai/keys
-atlas                         # chat
+npm i -g the-atlas   # Node.js 22+
+atlas
 ```
+
+On first run pick **OpenRouter**: the browser opens, you sign in, the key arrives by itself. No copy-paste.
+
+**Docs:** https://kamron5505.github.io/the-atlas/ · O'zbekcha (default) · [Русский](https://kamron5505.github.io/the-atlas/ru/) · [English](https://kamron5505.github.io/the-atlas/en/)
+
+## What you get
+
+| | |
+|---|---|
+| **Free models, auto-switch** | OpenRouter, Gemini, Groq, Cerebras, Mistral, GitHub Models, NVIDIA, SambaNova, OmniRoute, Ollama. A busy or rate-limited model is skipped; the next one answers. |
+| **Agent mode** | `/agent <task>` reads and edits project files and runs commands. Every change shows a diff and asks first. |
+| **47 AI agents** | `/agents` installs and opens Claude Code, Codex, Gemini CLI, Aider and more in a new terminal window. |
+| **MCP tools** | `atlas mcp add filesystem` (also github, browser, memory…), or import from Claude Desktop. |
+| **Voice** | `ctrl+r`, speak, Enter. Groq Whisper (free key). |
+| **Compare** | `/compare` asks 2-3 AIs at once and shows the fastest. |
+| **History** | Chats are saved locally: `/history`, `/resume`, `atlas -c`, `/export`. |
+| **Status line** | Repo, branch, context bar, cost, model. Also for Claude Code: `atlas statusline --install claude`. |
 
 ## Commands
 
-| Command | What it does |
-|---|---|
-| `atlas` | Interactive chat. `/help`, `/model groq/llama-3.3-70b-versatile`, `/provider auto`, `/models`, `/lang uz` |
-| `atlas ask "…"` | One-shot answer; pipe-friendly: `git diff \| atlas ask "review"` |
-| `atlas keys add\|list\|rm <provider>` | Keys are stored only in `~/.the-atlas/config.json`, typed hidden |
-| `atlas providers` · `atlas models <p> --free` | Provider status · live model list |
-| `atlas use <provider> [model]` | Default provider (`auto` = fallback chain) |
-| `atlas agents` | Menu of 45+ AI CLIs: search, install, launch. **Tab** = run on Atlas free models |
-| `atlas run aider --free` | Launch an agent wired to the local Atlas proxy |
-| `atlas serve` | Local OpenAI-compatible endpoint (`127.0.0.1:4141/v1`, model `auto`) |
-| `atlas doctor` | Check node/npm/git/bash/python and ping providers |
+```text
+atlas                      chat (default)
+atlas ask "…"              one answer to stdout (pipe-friendly)
+atlas agent "…"            agent mode in this folder
+atlas connect [provider]   connect an AI
+atlas agents               launcher for 47 AI CLIs
+atlas mcp …                MCP servers
+atlas voice                speak → text
+atlas serve                local OpenAI-compatible endpoint
+atlas doctor               check environment, terminal and providers
+```
 
-## How "auto" works
+In chat type `/` for all commands, `@path` to attach a file, `↑↓` for history, `Esc` to stop.
 
-Providers are tried in order (`openrouter → gemini → groq → …`). On a rate limit, outage or bad key the next one answers — before the first token, so replies never mix.
+## Privacy
 
-## Free tiers — fair use
+Keys, chats and settings stay on your computer in `~/.the-atlas/`. Atlas has no server and sends nothing except your requests to the AI you chose.
 
-The Atlas uses **your own** keys. Free tiers are for personal use; do not share or resell keys.
+## Development
 
----
-🇺🇿 **O'zbekcha (standart til):** barcha AI yordamchilar bitta terminalda.
-🇷🇺 **Русский:** все ИИ-ассистенты в одном терминале. `atlas lang ru` · English: `atlas lang en`.
+```bash
+npm ci
+npm run typecheck && npx vitest run && npm run build
+npm run site:dev            # docs site
+```
 
-MIT · agent catalog derived from [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI).
+MIT · Agent catalog derived from [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI).

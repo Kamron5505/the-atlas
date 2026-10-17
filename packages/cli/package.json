@@ -46,5 +46,15 @@
   "license": "MIT",
   "engines": {
     "node": ">=22"
-  }
+  },
+  "homepage": "https://kamron5505.github.io/the-atlas/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kamron5505/the-atlas.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/Kamron5505/the-atlas/issues"
+  },
+  "author": "Kamron5505"
 }
