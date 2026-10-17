@@ -22,6 +22,11 @@ import { claudeStatusline } from "./statusline.js";
 import { installClaudeStatusline } from "./statusline-install.js";
 import { a } from "./ui/ansi.js";
 import { registerAgents, runAgentsMenu } from "./agents/command.js";
+import { AgentRun } from "./agent/AgentRun.js";
+import { agentT } from "./agent/i18n.js";
+import { registerMcp } from "./mcp/command.js";
+import { McpManager } from "./mcp/manager.js";
+import { registerVoice } from "./voice/index.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "./system.js";
 import { Connect } from "./ui/Connect.js";
 import type { ChatExit } from "./ui/Chat.js";
@@ -324,6 +329,46 @@ program
   });
 
 registerAgents(program);
+registerMcp(program);
+registerVoice(program);
+
+program
+  .command("agent")
+  .description("agent mode: the AI reads/edits files and runs commands in this folder (asks before changes)")
+  .argument("<task...>", "what to do")
+  .option("-p, --provider <id>", "provider id or auto")
+  .option("-m, --model <model>", "model id")
+  .action(async (words: string[], opts: { provider?: string; model?: string }) => {
+    const cfg = loadConfig();
+    const lang = detectLang(cfg);
+    if (!process.stdin.isTTY) fail("agent mode needs a terminal (it asks for approvals)");
+    let mgr: McpManager | undefined;
+    try {
+      mgr = new McpManager({ cwd: process.cwd() });
+      await mgr.connectAll();
+    } catch (err) {
+      console.error(c.red(`✗ mcp.json: ${(err as Error).message}`));
+    }
+    let failed = false;
+    const app = render(
+      <AgentRun
+        cfg={cfg}
+        L={agentT(lang)}
+        lang={lang}
+        task={words.join(" ")}
+        provider={opts.provider ?? cfg.provider}
+        model={opts.model}
+        extraTools={mgr?.tools() ?? []}
+        onDone={(r) => {
+          failed = !!r.error;
+          app.unmount();
+        }}
+      />,
+    );
+    await app.waitUntilExit();
+    await mgr?.closeAll();
+    process.exitCode = failed ? 1 : 0;
+  });
 
 program.command("doctor").description("check environment and ping providers").action(doctor);
 

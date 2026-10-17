@@ -4,9 +4,21 @@ import type { ModelInfo } from "./providers.js";
 /** OpenAI-style multimodal part (text or an image as a data: URL). */
 export type ContentPart = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
+/** A function call requested by the model (OpenAI format). */
+export interface ToolCallMessage {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+}
+
 export interface ChatMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
+  /** "" on assistant tool-call messages. */
   content: string | ContentPart[];
+  /** Assistant: tools the model wants to run. */
+  tool_calls?: ToolCallMessage[];
+  /** Tool: the call this message answers. */
+  tool_call_id?: string;
 }
 
 export interface ChatOptions {
@@ -19,6 +31,7 @@ export interface ChatOptions {
 
 /** Plain text of a message (images dropped) — for token estimates and exports. */
 export function messageText(m: ChatMessage): string {
+  if (m.content == null) return ""; // providers may send null on tool-call messages
   return typeof m.content === "string" ? m.content : m.content.map((p) => (p.type === "text" ? p.text : "[image]")).join("\n");
 }
 
@@ -147,4 +160,114 @@ export async function listModels(p: ResolvedProvider, signal?: AbortSignal): Pro
       info.free = p.def.freeModelFilter ? p.def.freeModelFilter(info) : p.def.free;
       return info;
     });
+}
+
+/** Tool definition sent to the model (OpenAI function-calling format). */
+export interface ToolSpec {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+/** A complete tool call after the stream ends. */
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+
+export type ToolStreamEvent =
+  | { type: "text"; delta: string }
+  | { type: "tool_calls"; calls: ToolCall[] }
+  | { type: "done"; finishReason?: string };
+
+/** Parses an SSE stream into raw JSON chunks (each `data:` line); stops at [DONE]. */
+export async function* parseSSEChunks(body: ReadableStream<Uint8Array>): AsyncGenerator<Record<string, unknown>> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  const parse = (line: string): Record<string, unknown> | "done" | undefined => {
+    line = line.trim();
+    if (!line.startsWith("data:")) return undefined;
+    const data = line.slice(5).trim();
+    if (data === "[DONE]") return "done";
+    try {
+      return JSON.parse(data) as Record<string, unknown>;
+    } catch {
+      return undefined;
+    }
+  };
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const r = parse(buf.slice(0, nl));
+        buf = buf.slice(nl + 1);
+        if (r === "done") return;
+        if (r) yield r;
+      }
+    }
+    const r = parse(buf);
+    if (r && r !== "done") yield r;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+interface ToolDelta {
+  index?: number;
+  id?: string;
+  function?: { name?: string; arguments?: string };
+}
+
+/**
+ * Streams one model step with tools available. Yields text deltas as they
+ * arrive, then the accumulated tool calls (if any), then "done".
+ */
+export async function* streamChatTools(
+  p: ResolvedProvider,
+  messages: ChatMessage[],
+  tools: ToolSpec[],
+  opts: ChatOptions = {},
+): AsyncGenerator<ToolStreamEvent> {
+  const model = opts.model ?? p.model;
+  if (!model) throw new ProviderError(`${p.def.name}: no model selected`, p.def.id, 404);
+  const body: Record<string, unknown> = { model, messages, stream: true, temperature: opts.temperature };
+  if (tools.length) {
+    body.tools = tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.parameters } }));
+    body.tool_choice = "auto";
+  }
+  const res = await request(p, "/chat/completions", { method: "POST", body: JSON.stringify(body), signal: opts.signal });
+  opts.onResponse?.(p.def.id, res.headers);
+  if (!res.body) throw new ProviderError(`${p.def.name}: empty response`, p.def.id, 502);
+  const acc = new Map<number, { id?: string; name: string; arguments: string }>();
+  let finishReason: string | undefined;
+  for await (const json of parseSSEChunks(res.body)) {
+    const err = json.error as { message?: string } | string | undefined;
+    if (err) throw new ProviderError(`${p.def.name}: ${typeof err === "string" ? err : (err.message ?? "stream error")}`, p.def.id);
+    const choice = (json.choices as { delta?: { content?: string | null; tool_calls?: ToolDelta[] }; finish_reason?: string | null }[] | undefined)?.[0];
+    if (!choice) continue;
+    if (choice.finish_reason) finishReason = choice.finish_reason;
+    const d = choice.delta;
+    if (d?.content) yield { type: "text", delta: d.content };
+    for (const [pos, tc] of (d?.tool_calls ?? []).entries()) {
+      let idx = tc.index ?? pos;
+      // Some providers omit index (or reuse it) for separate calls; a new id means a new call.
+      if (tc.id && acc.get(idx)?.id && acc.get(idx)!.id !== tc.id) idx = Math.max(...acc.keys()) + 1;
+      const cur = acc.get(idx) ?? { name: "", arguments: "" };
+      if (tc.id) cur.id = tc.id;
+      if (tc.function?.name) cur.name += tc.function.name;
+      if (tc.function?.arguments) cur.arguments += tc.function.arguments;
+      acc.set(idx, cur);
+    }
+  }
+  const calls = [...acc.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([i, c]) => ({ id: c.id || `call_${Date.now().toString(36)}_${i}`, name: c.name, arguments: c.arguments || "{}" }))
+    .filter((c) => c.name);
+  if (calls.length) yield { type: "tool_calls", calls };
+  yield { type: "done", finishReason };
 }

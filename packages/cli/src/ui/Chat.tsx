@@ -24,6 +24,13 @@ import { isLang, t, type Lang } from "../i18n.js";
 import { formatLimit, isLow, limitFor, recordLimited, recordRequest } from "../limits.js";
 import { ago, lastSession, listSessions, loadSession, newSession, saveSession, toMarkdown, type Session } from "../session.js";
 import { gitInfo, renderStatusline, type GitInfo } from "../statusline.js";
+import { AgentRun } from "../agent/AgentRun.js";
+import { agentT } from "../agent/i18n.js";
+import type { AgentResult } from "../agent/loop.js";
+import { mcpT } from "../mcp/i18n.js";
+import { McpManager, type McpServerStatus } from "../mcp/manager.js";
+import { McpStatus } from "../mcp/McpStatus.js";
+import { isVoiceKey, joinVoiceText, VoiceInput, voiceT } from "../voice/index.js";
 import { Compare, compareTargets, type CompareResult, type CompareTarget } from "./Compare.js";
 import { Connect, shortName } from "./Connect.js";
 import { Markdown } from "./Markdown.js";
@@ -46,11 +53,14 @@ type Overlay =
   | { kind: "agents" }
   | { kind: "install"; pick: MenuResult }
   | { kind: "history" }
-  | { kind: "compare"; targets: CompareTarget[]; question: string };
+  | { kind: "compare"; targets: CompareTarget[]; question: string }
+  | { kind: "agent"; task: string }
+  | { kind: "voice"; restore: string }
+  | { kind: "mcp" };
 
 export type ChatExit = { kind: "quit" } | { kind: "agents" };
 
-const COMMANDS = ["connect", "model", "compare", "agents", "history", "resume", "export", "provider", "omniroute", "clear", "lang", "help", "exit"] as const;
+const COMMANDS = ["agent", "connect", "model", "compare", "voice", "agents", "mcp", "history", "resume", "export", "provider", "omniroute", "clear", "lang", "help", "exit"] as const;
 type CommandName = (typeof COMMANDS)[number];
 
 const DEFAULT_CONTEXT = 128_000;
@@ -168,6 +178,25 @@ export function Chat({
   const sent = useRef<string[]>([]);
   const histPos = useRef(-1);
   const warned = useRef(new Set<string>());
+  // MCP servers connect in the background once per chat; tools are offered to agent mode.
+  const mcp = useRef<McpManager | null>(null);
+  const [, setMcpStatus] = useState<McpServerStatus[]>([]);
+  useEffect(() => {
+    let m: McpManager;
+    try {
+      m = new McpManager({ cwd });
+    } catch (err) {
+      // A broken mcp.json must not take the chat down.
+      push(entry("error", `mcp.json: ${(err as Error).message}`));
+      return;
+    }
+    mcp.current = m;
+    void m.connectAll().then(setMcpStatus);
+    return () => {
+      void m.closeAll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const tick = useTicker(streaming !== null);
 
   const push = (...e: Entry[]) => setLog((l) => [...l, ...e]);
@@ -179,6 +208,7 @@ export function Chat({
   const width = Math.max(40, Math.min(columns, 110));
 
   const quit = (e: ChatExit = { kind: "quit" }) => {
+    void mcp.current?.closeAll();
     onExit?.(e);
     exit();
   };
@@ -208,6 +238,8 @@ export function Chat({
 
   useInput(
     (_ch, key) => {
+      // ctrl+r = record voice; keep what was typed (ink-text-input also inserts the "r").
+      if (isVoiceKey(_ch, key) && streaming === null) return setOverlay({ kind: "voice", restore: input });
       if (key.escape) {
         if (abort.current) return abort.current.abort();
         histPos.current = -1;
@@ -269,6 +301,16 @@ export function Chat({
         return quit();
       case "agents":
         return setOverlay({ kind: "agents" });
+      case "agent": {
+        const task = line.trim().replace(/^\/agent\s*/i, "");
+        if (!task) return push(entry("info", L.agentUsage));
+        push(entry("user", `/agent ${task}`));
+        return setOverlay({ kind: "agent", task });
+      }
+      case "mcp":
+        return setOverlay({ kind: "mcp" });
+      case "voice":
+        return setOverlay({ kind: "voice", restore: "" });
       case "connect":
         return setOverlay({ kind: "connect", initial: arg && getProvider(arg) ? arg : undefined });
       case "omniroute":
@@ -423,6 +465,24 @@ export function Chat({
     setAnswered({ provider: picked.provider, model: picked.model });
     push(entry("step", L.kept, picked.label));
     persist(picked.label);
+  }
+
+  function finishAgent(task: string, r: AgentResult) {
+    setOverlay(null);
+    const where = r.provider ? `${r.provider}/${r.model ?? "?"}` : "";
+    const meta = [where, `${r.steps} steps`, r.changedFiles.length ? `${r.changedFiles.length} ${L.agentChanged}` : ""].filter(Boolean).join(" · ");
+    if (r.text) push(entry("assistant", r.text, meta));
+    if (r.changedFiles.length) push(entry("info", `${L.agentChanged}: ${r.changedFiles.join(", ")}`));
+    if (r.aborted) push(entry("info", L.cancelled));
+    if (r.error) push(entry("error", r.error));
+    // Plain chat providers may reject tool messages, so only the task + final text join the history.
+    history.current.push({ role: "user", content: task }, { role: "assistant", content: r.text || "…" });
+    if (r.provider) {
+      recordRequest(r.provider);
+      setAnswered({ provider: r.provider, model: r.model });
+    }
+    persist(meta);
+    setGit(gitInfo(cwd));
   }
 
   async function openAgent(agent: Agent, free: boolean) {
@@ -651,6 +711,39 @@ export function Chat({
           onDone={(results, picked) => finishCompare(overlay.question, results, picked)}
         />
       )}
+      {overlay?.kind === "agent" && (
+        <AgentRun
+          cfg={cfg}
+          L={agentT(lang)}
+          lang={lang}
+          task={overlay.task}
+          history={history.current}
+          provider={provider}
+          model={model}
+          cwd={cwd}
+          extraTools={mcp.current?.tools() ?? []}
+          onDone={(r) => finishAgent(overlay.task, r)}
+        />
+      )}
+      {overlay?.kind === "voice" && (
+        <VoiceInput
+          cfg={cfg}
+          L={voiceT(lang)}
+          lang={lang}
+          onDone={(text) => {
+            const r = overlay.restore;
+            setOverlay(null);
+            setInputMoveCursor(text ? joinVoiceText(r, text) : r);
+          }}
+          onError={(msg) => {
+            const r = overlay.restore;
+            setOverlay(null);
+            setInputMoveCursor(r);
+            push(entry("error", msg));
+          }}
+        />
+      )}
+      {overlay?.kind === "mcp" && <McpStatus L={mcpT(lang)} status={mcp.current?.status() ?? []} onClose={() => setOverlay(null)} />}
       {overlay?.kind === "agents" && <AgentMenu rows={rowsFor(loadAgents(lang))} L={L} embedded onPick={pickAgent} />}
       {overlay?.kind === "install" && (
         <Select

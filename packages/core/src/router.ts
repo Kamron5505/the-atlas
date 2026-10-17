@@ -1,5 +1,5 @@
 import { readyProviders, resolveProvider, type AtlasConfig, type ResolvedProvider } from "./config.js";
-import { ProviderError, streamChat, type ChatMessage, type ChatOptions } from "./client.js";
+import { ProviderError, streamChat, streamChatTools, type ChatMessage, type ChatOptions, type ToolSpec, type ToolStreamEvent } from "./client.js";
 import { cachedModels, freeChatModels, reachable } from "./models.js";
 
 /** Every candidate failed; `limited` = at least one hit its free limit. */
@@ -102,6 +102,55 @@ export async function* routeChat(cfg: AtlasConfig, messages: ChatMessage[], opts
         if (started || !(err instanceof ProviderError) || !err.retryable) throw err;
         errors.push(err);
         const lastHere = i === models.length - 1 || !modelLevel(err);
+        opts.onEvent?.({ type: "fallback", provider: p.def.id, model, error: err.message, limited: err.limited });
+        if (lastHere) break;
+      }
+    }
+  }
+  if (!errors.length) throw new Error("No AI is reachable. Run: atlas connect");
+  throw new RouteError(errors);
+}
+
+/** The provider/model rejected function calling (e.g. 400 "does not support tool use"). */
+export function rejectsTools(e: ProviderError): boolean {
+  return (e.status === 400 || e.status === 404 || e.status === 422) && /tool|function/i.test(e.message);
+}
+
+/**
+ * One agent step with tools: like routeChat, but yields ToolStreamEvents and also
+ * falls back when a model rejects tools. Fallback only before the first event.
+ */
+export async function* routeAgentStep(
+  cfg: AtlasConfig,
+  messages: ChatMessage[],
+  tools: ToolSpec[],
+  opts: RouteOptions = {},
+): AsyncGenerator<ToolStreamEvent> {
+  const list = candidates(cfg, opts.provider ?? cfg.provider);
+  const auto = list.length > 1;
+  const errors: ProviderError[] = [];
+  for (const p of list) {
+    if (auto && !p.def.keyRequired && !(await reachable(p))) continue;
+    const models = await modelsToTry(p, auto ? undefined : opts.model, opts.signal);
+    if (!models.length) {
+      errors.push(new ProviderError(`${p.def.name}: no model available`, p.def.id, 404));
+      continue;
+    }
+    for (const [i, model] of models.entries()) {
+      opts.onEvent?.({ type: "provider", provider: p.def.id, model });
+      let started = false;
+      try {
+        for await (const ev of streamChatTools(p, messages, tools, { ...opts, model })) {
+          if (ev.type !== "done") started = true;
+          yield ev;
+        }
+        return;
+      } catch (err) {
+        if (started || !(err instanceof ProviderError)) throw err;
+        const noTools = rejectsTools(err);
+        if (!noTools && !err.retryable) throw err;
+        errors.push(err);
+        const lastHere = i === models.length - 1 || !(noTools || modelLevel(err));
         opts.onEvent?.({ type: "fallback", provider: p.def.id, model, error: err.message, limited: err.limited });
         if (lastHere) break;
       }
