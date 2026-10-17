@@ -1,0 +1,36 @@
+{
+  "name": "the-atlas",
+  "version": "0.1.0",
+  "description": "All AI assistants in one terminal: chat with free-tier models (OpenRouter, Gemini, Groq, OmniRoute…) with auto-fallback, and launch 45+ AI coding agents.",
+  "type": "module",
+  "bin": {
+    "atlas": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "agents.conf",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepack": "tsup",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "ink": "^8.0.0",
+    "ink-gradient": "^4.0.1",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@the-atlas/core": "0.1.0"
+  },
+  "keywords": ["ai", "cli", "llm", "openrouter", "gemini", "groq", "ollama", "omniroute", "free", "agents", "uzbek"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}
