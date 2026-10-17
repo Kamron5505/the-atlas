@@ -1,0 +1,90 @@
+---
+/**
+ * Native <select> with a branded face: the select covers the whole control
+ * (keyboard, screen readers, mobile pickers stay native) and its own text is
+ * hidden; the face shows the current option's icon + label. All labels are
+ * stacked in one grid cell, so the width fits the longest and never jumps.
+ * Styles: src/styles/controls.css.
+ */
+import ChevronDown from "@lucide/astro/icons/chevron-down";
+
+export interface Option {
+  value: string;
+  label: string;
+  /** Short form for compact mode, e.g. "UZ". Empty: icon only. */
+  short: string;
+  selected: boolean;
+  lang?: string;
+  /** Lucide icon component. */
+  icon: (props: Record<string, unknown>) => unknown;
+}
+
+interface Props {
+  /** Accessible name of the select. */
+  label: string;
+  options: Option[];
+  /** Header use: icon + short code below 80rem, full label above. */
+  compact?: boolean;
+}
+
+const { label, options, compact = false } = Astro.props;
+const current = options.find((o) => o.selected) ?? options[0]!;
+---
+
+<label class:list={["atlas-select", { "is-compact": compact }]} title={compact ? current.label : undefined}>
+  <span class="sr-only">{label}</span>
+  <span class="atlas-select__face" aria-hidden="true">
+    <span class="atlas-select__stack atlas-select__icon">
+      {
+        options.map((o) => {
+          const Icon = o.icon;
+          return (
+            <span data-v={o.value} data-on={o === current ? "" : undefined}>
+              <Icon size={15} stroke-width={2} />
+            </span>
+          );
+        })
+      }
+    </span>
+    <span class="atlas-select__stack atlas-select__text">
+      {
+        options.map((o) => (
+          <span data-v={o.value} data-on={o === current ? "" : undefined}>
+            <span class="atlas-select__full">{o.label}</span>
+            {o.short && <span class="atlas-select__short">{o.short}</span>}
+          </span>
+        ))
+      }
+    </span>
+    <ChevronDown class="atlas-select__caret" size={14} stroke-width={2.25} />
+  </span>
+  <select autocomplete="off">
+    {
+      options.map((o) => (
+        <option value={o.value} selected={o.selected} lang={o.lang}>
+          {o.label}
+        </option>
+      ))
+    }
+  </select>
+</label>
+
+<script>
+  /** Face follows the select value (change, bfcache restore, theme script). */
+  function sync(select: HTMLSelectElement) {
+    const root = select.closest<HTMLElement>(".atlas-select");
+    if (!root) return;
+    root.querySelectorAll<HTMLElement>("[data-v]").forEach((el) => {
+      el.toggleAttribute("data-on", el.dataset.v === select.value);
+    });
+    if (root.classList.contains("is-compact")) root.title = select.selectedOptions[0]?.text.trim() ?? "";
+  }
+  const all = () => document.querySelectorAll<HTMLSelectElement>(".atlas-select select");
+  all().forEach((s) => {
+    s.addEventListener("change", () => sync(s));
+    sync(s);
+  });
+  window.addEventListener("pageshow", () => all().forEach(sync));
+  // Lets other scripts (theme picker) refresh the faces after setting .value.
+  window.addEventListener("atlas:select-sync", () => all().forEach(sync));
+</script>

@@ -1,0 +1,85 @@
+---
+/**
+ * Theme picker (Starlight `ThemeSelect` override). Keeps Starlight's
+ * <starlight-theme-select> element so StarlightThemeProvider.updatePickers()
+ * still finds it; the face is our PrefSelect.
+ */
+import Monitor from "@lucide/astro/icons/monitor";
+import Moon from "@lucide/astro/icons/moon";
+import Sun from "@lucide/astro/icons/sun";
+import PrefSelect from "./PrefSelect.astro";
+
+interface Props {
+  compact?: boolean;
+}
+
+const t = Astro.locals.t;
+---
+
+<starlight-theme-select>
+  <PrefSelect
+    label={t("themeSelect.accessibleLabel")}
+    compact={Astro.props.compact}
+    options={[
+      { value: "dark", label: t("themeSelect.dark"), short: "", selected: false, icon: Moon },
+      { value: "light", label: t("themeSelect.light"), short: "", selected: false, icon: Sun },
+      { value: "auto", label: t("themeSelect.auto"), short: "", selected: true, icon: Monitor },
+    ]}
+  />
+</starlight-theme-select>
+
+{/* Inlined to avoid a flash of the wrong value: sets the stored theme on the select and its face. */}
+<script is:inline>
+  StarlightThemeProvider.updatePickers();
+  document.querySelectorAll("starlight-theme-select").forEach(function (p) {
+    var sel = p.querySelector("select");
+    if (!sel) return;
+    p.querySelectorAll("[data-v]").forEach(function (el) {
+      el.toggleAttribute("data-on", el.getAttribute("data-v") === sel.value);
+    });
+  });
+</script>
+
+<script>
+  type Theme = "auto" | "dark" | "light";
+  const storageKey = "starlight-theme";
+
+  const parseTheme = (theme: unknown): Theme => (theme === "auto" || theme === "dark" || theme === "light" ? theme : "auto");
+  const loadTheme = (): Theme => {
+    try {
+      return parseTheme(localStorage.getItem(storageKey));
+    } catch {
+      return "auto";
+    }
+  };
+  function storeTheme(theme: Theme): void {
+    try {
+      localStorage.setItem(storageKey, theme === "light" || theme === "dark" ? theme : "");
+    } catch {
+      // storage blocked: the choice lasts for this page only
+    }
+  }
+  const preferred = (): Theme => (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+
+  function onThemeChange(theme: Theme): void {
+    StarlightThemeProvider.updatePickers(theme);
+    document.documentElement.dataset.theme = theme === "auto" ? preferred() : theme;
+    storeTheme(theme);
+    window.dispatchEvent(new Event("atlas:select-sync"));
+  }
+
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
+    if (loadTheme() === "auto") onThemeChange("auto");
+  });
+
+  class AtlasThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      onThemeChange(loadTheme());
+      this.querySelector("select")?.addEventListener("change", (e) => {
+        if (e.currentTarget instanceof HTMLSelectElement) onThemeChange(parseTheme(e.currentTarget.value));
+      });
+    }
+  }
+  if (!customElements.get("starlight-theme-select")) customElements.define("starlight-theme-select", AtlasThemeSelect);
+</script>

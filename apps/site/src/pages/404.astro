@@ -1,0 +1,252 @@
+---
+/**
+ * Localized 404 (Starlight's own 404 route is off: `disable404Route` in astro.config.mjs).
+ * One static file serves every missing URL, so the language comes from the URL
+ * prefix in the browser (/ru/..., /en/..., else uz). Without JS it stays Uzbek
+ * and links to the Russian and English versions.
+ */
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import BookOpen from "@lucide/astro/icons/book-open";
+import House from "@lucide/astro/icons/house";
+import { DICT, NAV, href, type Locale } from "../i18n/ui";
+
+export const prerender = true;
+
+const COPY: Record<Locale, { line: string; home: string; docs: string; other: string; name: string }> = {
+  uz: { line: "Bu manzilda sahifa yo'q.", home: "Bosh sahifa", docs: "Hujjatlar", other: "Boshqa tilda:", name: "O'zbekcha" },
+  ru: { line: "По этому адресу страницы нет.", home: "На главную", docs: "Документация", other: "На другом языке:", name: "Русский" },
+  en: { line: "There is no page at this address.", home: "Home", docs: "Docs", other: "Other languages:", name: "English" },
+};
+const LOCALES: Locale[] = ["uz", "ru", "en"];
+const DOCS = "getting-started/installation/";
+const t = Astro.locals.t;
+const data = Object.fromEntries(
+  LOCALES.map((l) => [l, { ...COPY[l], homeHref: href(l), docsHref: href(l, DOCS) }]),
+);
+// Header strings per language, so the header matches the URL's language too.
+const chrome = Object.fromEntries(
+  LOCALES.map((l) => [
+    l,
+    {
+      nav: NAV.map((n) => ({ text: DICT[l].nav[n.key], href: href(l, n.slug) })),
+      navLabel: DICT[l].navLabel,
+      search: t("search.label", { lng: l }),
+      theme: {
+        dark: t("themeSelect.dark", { lng: l }),
+        light: t("themeSelect.light", { lng: l }),
+        auto: t("themeSelect.auto", { lng: l }),
+        label: t("themeSelect.accessibleLabel", { lng: l }),
+      },
+      langLabel: t("languageSelect.accessibleLabel", { lng: l }),
+    },
+  ]),
+);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<StarlightPage frontmatter={{ title: "404", template: "splash", pagefind: false, editUrl: false }}>
+  <section class="nf not-content" data-nf={JSON.stringify(data)} data-chrome={JSON.stringify(chrome)} data-base={base}>
+    <p class="path" aria-hidden="true"><span class="caret">›</span> <span data-nf-path></span></p>
+    <h1 class="code">404</h1>
+    <p class="line" data-nf-text="line">{COPY.uz.line}</p>
+    <div class="actions">
+      <a class="btn primary" href={href("uz")} data-nf-href="homeHref">
+        <House size={18} stroke-width={2} aria-hidden="true" />
+        <span data-nf-text="home">{COPY.uz.home}</span>
+      </a>
+      <a class="btn ghost" href={href("uz", DOCS)} data-nf-href="docsHref">
+        <BookOpen size={18} stroke-width={2} aria-hidden="true" />
+        <span data-nf-text="docs">{COPY.uz.docs}</span>
+      </a>
+    </div>
+    <p class="langs">
+      <span data-nf-text="other">{COPY.uz.other}</span>
+      {
+        LOCALES.map((l) => (
+          <a href={href(l)} lang={l} data-nf-lang={l} hidden={l === "uz" ? true : undefined}>
+            {COPY[l].name}
+          </a>
+        ))
+      }
+    </p>
+  </section>
+</StarlightPage>
+
+<script>
+  type Copy = Record<string, string>;
+  interface Chrome {
+    nav: { text: string; href: string }[];
+    navLabel: string;
+    search: string;
+    theme: Record<"dark" | "light" | "auto" | "label", string>;
+    langLabel: string;
+  }
+
+  function localizeHeader(c: Chrome | undefined) {
+    if (!c) return;
+    const nav = document.querySelector<HTMLElement>("header .top-nav");
+    nav?.setAttribute("aria-label", c.navLabel);
+    nav?.querySelectorAll("a").forEach((a, i) => {
+      const item = c.nav[i];
+      if (!item) return;
+      a.textContent = item.text;
+      a.href = item.href;
+    });
+    document.querySelectorAll("site-search button[data-open-modal]").forEach((b) => {
+      b.setAttribute("aria-label", c.search);
+      const span = b.querySelector("span");
+      if (span) span.textContent = c.search;
+    });
+    document.querySelectorAll("starlight-theme-select").forEach((p) => {
+      const sr = p.querySelector(".sr-only");
+      if (sr) sr.textContent = c.theme.label;
+      p.querySelectorAll<HTMLElement>(".atlas-select__text [data-v]").forEach((el) => {
+        const v = el.dataset.v as "dark" | "light" | "auto";
+        const full = el.querySelector(".atlas-select__full");
+        if (full) full.textContent = c.theme[v];
+      });
+      p.querySelectorAll("option").forEach((o) => {
+        o.textContent = c.theme[o.value as "dark" | "light" | "auto"] ?? o.textContent;
+      });
+    });
+    document.querySelectorAll("starlight-lang-select .sr-only").forEach((sr) => {
+      sr.textContent = c.langLabel;
+    });
+  }
+  const root = document.querySelector<HTMLElement>("[data-nf]");
+  if (root) {
+    const all = JSON.parse(root.dataset.nf ?? "{}") as Record<string, Copy>;
+    const path = location.pathname.slice((root.dataset.base ?? "").length);
+    const lang = /^\/ru(\/|$)/.test(path) ? "ru" : /^\/en(\/|$)/.test(path) ? "en" : "uz";
+    const T = all[lang]!;
+    root.querySelector("[data-nf-path]")!.textContent = decodeURIComponent(location.pathname);
+    root.querySelectorAll<HTMLElement>("[data-nf-text]").forEach((el) => {
+      el.textContent = T[el.dataset.nfText!] ?? el.textContent;
+    });
+    root.querySelectorAll<HTMLAnchorElement>("[data-nf-href]").forEach((a) => {
+      a.href = T[a.dataset.nfHref!] ?? a.href;
+    });
+    root.querySelectorAll<HTMLAnchorElement>("[data-nf-lang]").forEach((a) => {
+      a.hidden = a.dataset.nfLang === lang;
+    });
+    if (lang !== "uz") {
+      document.documentElement.lang = lang;
+      // Header language picker: show the language of this URL.
+      document.querySelectorAll<HTMLSelectElement>("starlight-lang-select select").forEach((s) => {
+        const i = [...s.options].findIndex((o) => o.lang === lang);
+        if (i >= 0) s.selectedIndex = i;
+      });
+      localizeHeader(JSON.parse(root.dataset.chrome ?? "{}")[lang]);
+      window.dispatchEvent(new Event("atlas:select-sync"));
+    }
+  }
+</script>
+
+<style>
+  /* Our own title block replaces Starlight's page title panel. */
+  :global(main > .content-panel:has(> .sl-container > h1#_top)) {
+    display: none;
+  }
+  :global(main > .content-panel:has(.nf)) {
+    border-top: 0;
+  }
+  .nf {
+    display: grid;
+    justify-items: center;
+    gap: 0.75rem;
+    padding-block: clamp(3rem, 12vh, 7rem) 4rem;
+    text-align: center;
+  }
+  .path {
+    margin: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font: 500 0.8125rem var(--atlas-font-mono);
+    color: var(--atlas-dim);
+  }
+  .path:has([data-nf-path]:empty) {
+    visibility: hidden;
+  }
+  .caret {
+    color: var(--sl-color-accent);
+  }
+  .code {
+    margin: 0;
+    font: 800 clamp(6rem, 22vw, 11rem) / 0.9 var(--atlas-font-mono);
+    letter-spacing: -0.06em;
+    color: var(--sl-color-accent);
+    text-shadow: 0 0 42px color-mix(in srgb, var(--atlas-neon) 35%, transparent);
+  }
+  :root[data-theme="light"] .code {
+    text-shadow: none;
+  }
+  .line {
+    margin: 0.5rem 0 0;
+    font-size: 1.125rem;
+    color: var(--sl-color-gray-2);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.15rem;
+    border-radius: var(--atlas-radius);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      transform 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--sl-color-accent);
+    outline-offset: 3px;
+  }
+  .primary {
+    background: var(--sl-color-accent);
+    color: var(--sl-color-black);
+  }
+  .primary:hover {
+    background: var(--sl-color-accent-high);
+  }
+  :root[data-theme="light"] .primary:hover {
+    color: #fff;
+  }
+  .ghost {
+    color: var(--sl-color-white);
+    border: 1px solid var(--sl-color-gray-5);
+  }
+  .ghost:hover {
+    border-color: var(--sl-color-gray-3);
+  }
+  .langs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem 0.75rem;
+    margin: 1.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--atlas-dim);
+  }
+  .langs a {
+    color: var(--sl-color-gray-2);
+    text-underline-offset: 3px;
+  }
+  .langs a:hover {
+    color: var(--sl-color-accent);
+  }
+</style>

@@ -1,0 +1,60 @@
+---
+/**
+ * Language picker (Starlight `LanguageSelect` override): full name on wide
+ * screens, "UZ" / "RU" / "EN" in the compact header. Each option links to the
+ * same page in that language. Locales mirror astro.config.mjs `locales`.
+ */
+import Languages from "@lucide/astro/icons/languages";
+import PrefSelect from "./PrefSelect.astro";
+
+interface Props {
+  compact?: boolean;
+}
+
+const LOCALES = [
+  { code: undefined, lang: "uz", label: "O'zbekcha" },
+  { code: "ru", lang: "ru", label: "Русский" },
+  { code: "en", lang: "en", label: "English" },
+] as const;
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+// Path inside the site without the locale prefix, e.g. "/guides/chat/".
+const inner = Astro.url.pathname.slice(base.length).replace(/^\/(ru|en)(\/|$)/, "/") || "/";
+const current = Astro.locals.starlightRoute?.locale ?? (/^\/(ru|en)(\/|$)/.exec(Astro.url.pathname.slice(base.length))?.[1] as string | undefined);
+
+const options = LOCALES.map((l) => ({
+  value: `${base}${l.code ? `/${l.code}` : ""}${inner}`,
+  label: l.label,
+  short: l.lang.toUpperCase(),
+  lang: l.lang,
+  selected: (l.code ?? undefined) === (current ?? undefined),
+  icon: Languages,
+}));
+---
+
+<starlight-lang-select>
+  <PrefSelect label={Astro.locals.t("languageSelect.accessibleLabel")} compact={Astro.props.compact} options={options} />
+</starlight-lang-select>
+
+<script>
+  class AtlasLanguageSelect extends HTMLElement {
+    constructor() {
+      super();
+      const select = this.querySelector("select");
+      if (!select) return;
+      select.addEventListener("change", () => {
+        window.location.pathname = select.value;
+      });
+      window.addEventListener("pageshow", (event) => {
+        if (!event.persisted) return;
+        // Restored from bfcache: put the select back on this page's language.
+        const markup = select.querySelector<HTMLOptionElement>("option[selected]")?.index ?? 0;
+        if (select.selectedIndex !== markup) {
+          select.selectedIndex = markup;
+          window.dispatchEvent(new Event("atlas:select-sync"));
+        }
+      });
+    }
+  }
+  if (!customElements.get("starlight-lang-select")) customElements.define("starlight-lang-select", AtlasLanguageSelect);
+</script>

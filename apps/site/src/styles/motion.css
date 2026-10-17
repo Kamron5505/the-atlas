@@ -1,0 +1,86 @@
+/* Landing motion + hero scene. Imported by Landing.astro only (home pages). */
+
+/* ---------- Hero scene (React island) ---------- */
+.atlas-scene {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Soft edges so the canvas never shows a hard rectangle. */
+  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+}
+.atlas-scene-fallback,
+.atlas-scene-canvas {
+  position: absolute;
+  inset: 0;
+}
+/* Static frame for no WebGL / data saver / before the 3D chunk arrives. */
+.atlas-scene-fallback {
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--atlas-deep) 30%, transparent) 0, transparent 46%),
+    radial-gradient(circle at 50% 50%, transparent 0 26%, color-mix(in srgb, var(--atlas-neon) 26%, transparent) 26.4%, transparent 27.6%),
+    radial-gradient(ellipse 44% 16% at 50% 52%, transparent 0 88%, color-mix(in srgb, var(--atlas-glow) 22%, transparent) 92%, transparent 100%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--atlas-blue) 14%, transparent) 0, transparent 62%);
+  transition: opacity 0.9s ease;
+}
+.atlas-scene-canvas {
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+.atlas-scene[data-shown] .atlas-scene-canvas {
+  opacity: 1;
+}
+.atlas-scene[data-shown] .atlas-scene-fallback {
+  opacity: 0;
+}
+/* Drag to orbit only where a fine pointer exists; touch keeps native scrolling. */
+@media (hover: hover) and (pointer: fine) {
+  .atlas-scene-canvas {
+    pointer-events: auto;
+    cursor: grab;
+  }
+  .atlas-scene-canvas:active {
+    cursor: grabbing;
+  }
+}
+
+/* ---------- Hero intro: pure CSS so first paint and LCP never wait for JS ----------
+   Wordmark letters type in (Wordmark.astro), then headline words rise, then sub, CTAs, install.
+   Only transform/opacity animate; with reduced motion nothing moves and everything is visible. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing .hero .hw {
+    display: inline-block;
+    animation: atlas-rise 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    animation-delay: calc(0.05s + var(--i) * 0.045s);
+  }
+  /* The sub line is the phone LCP element: it slides but never starts transparent. */
+  .landing .hero .sub {
+    animation: atlas-slide 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+  }
+  .landing .hero .actions .btn {
+    animation: atlas-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s backwards;
+  }
+  .landing .hero .actions .btn + .btn {
+    animation-delay: 0.36s;
+  }
+  .landing .hero > .install {
+    animation: atlas-rise-far 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
+  }
+}
+@keyframes atlas-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+}
+@keyframes atlas-slide {
+  from {
+    transform: translateY(0.6em);
+  }
+}
+@keyframes atlas-rise-far {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}

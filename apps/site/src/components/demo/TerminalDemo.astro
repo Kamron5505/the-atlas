@@ -1,8 +1,9 @@
 ---
 /**
- * Plays a real recording of the Atlas CLI (src/demos/<name>.json, made by
- * packages/cli/scripts/capture-demos.tsx). ANSI is turned into HTML here at
- * build time; the page only gets a deduplicated line table + frame timings.
+ * Plays a real recording of the Atlas CLI (src/demos/<name>.<lang>.json, or the
+ * language-neutral <name>.json; made by packages/cli/scripts/capture-demos.tsx).
+ * The recording is a deduplicated ANSI line table; lines become HTML here at
+ * build time and the page gets the line table + frame index lists.
  */
 import RotateCcw from "@lucide/astro/icons/rotate-ccw";
 import { ansiToHtml, stripAnsi } from "./ansi";
@@ -19,45 +20,39 @@ interface Props {
 interface Recording {
   cols: number;
   rows: number;
-  frames: { t: number; ansi: string }[];
+  /** Unique ANSI lines. */
+  lines: string[];
+  /** [t ms, ...indexes into lines]. */
+  frames: number[][];
 }
 
 const { name, title = "atlas", autoplay = true } = Astro.props;
 
+// Page language: Starlight route locale, else the URL prefix (/ru/, /en/), else uz.
+const path = Astro.url.pathname.slice(import.meta.env.BASE_URL.replace(/\/$/, "").length);
+const routeLocale = Astro.locals.starlightRoute?.locale;
+const lang = routeLocale === "ru" || routeLocale === "en" ? routeLocale : path.startsWith("/ru/") ? "ru" : path.startsWith("/en/") ? "en" : "uz";
+
 const files = import.meta.glob<{ default: Recording }>("../../demos/*.json", { eager: true });
-const rec = files[`../../demos/${name}.json`]?.default;
+const rec = (files[`../../demos/${name}.${lang}.json`] ?? files[`../../demos/${name}.uz.json`] ?? files[`../../demos/${name}.json`])?.default;
 if (!rec?.frames.length) throw new Error(`TerminalDemo: no recording "${name}" in src/demos/`);
 
-// Line table: frames mostly differ by a line or two, so each frame is a list of indexes.
-const table: string[] = [];
-const seen = new Map<string, number>();
-const frames = rec.frames.map((f) => [
-  f.t,
-  ...f.ansi.split("\n").map((line) => {
-    const html = ansiToHtml(line);
-    let i = seen.get(html);
-    if (i === undefined) {
-      i = table.push(html) - 1;
-      seen.set(html, i);
-    }
-    return i;
-  }),
-]);
+// ANSI -> HTML once per unique line.
+const lines = rec.lines.map((l) => ansiToHtml(l));
+const frames = rec.frames;
 const last = frames.at(-1)!;
 const lastHtml = last
   .slice(1)
-  .map((i) => table[i])
+  .map((i) => lines[i])
   .join("\n");
-const payload = JSON.stringify({ lines: table, frames }).replace(/</g, "\\u003c");
+const payload = JSON.stringify({ lines, frames }).replace(/</g, "\\u003c");
 
-const path = Astro.url.pathname.slice(import.meta.env.BASE_URL.replace(/\/$/, "").length);
-const lang = path.startsWith("/ru/") ? "ru" : path.startsWith("/en/") ? "en" : "uz";
 const T = {
   uz: { replay: "Qayta ko'rsatish", label: "Atlas CLI yozuvi" },
   ru: { replay: "Показать снова", label: "Запись Atlas CLI" },
   en: { replay: "Replay", label: "Atlas CLI recording" },
 }[lang];
-const summary = stripAnsi(rec.frames.at(-1)!.ansi)
+const summary = stripAnsi(last.slice(1).map((i) => rec.lines[i]).join("\n"))
   .split("\n")
   .map((l) => l.trim())
   .filter((l) => l && !/^[─╭╰│█╗╔║╚═\s]+$/.test(l))

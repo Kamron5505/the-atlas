@@ -1,11 +1,13 @@
 /**
  * Records the real Atlas CLI UI (Ink components) as timed ANSI frames for the
- * website's terminal demos: apps/site/src/demos/<name>.json = {cols, rows, frames:[{t, ansi}]}.
+ * website's terminal demos, once per site language (uz, ru, en):
+ * apps/site/src/demos/<name>.<lang>.json = {cols, rows, lines, frames:[[t, ...lineIndexes]]}.
+ * Language-neutral demos (logo) are written once as <name>.json.
  *
  * Offline and side-effect free: fetch is mocked (scripted SSE answers), the
  * browser opener is faked, HOME / ATLAS_HOME / PATH point at a temp sandbox.
  *
- *   npx tsx --tsconfig packages/cli/tsconfig.json packages/cli/scripts/capture-demos.tsx [logo chat connect compare agent agents]
+ *   npx tsx --tsconfig packages/cli/tsconfig.json packages/cli/scripts/capture-demos.tsx [logo chat chat.ru ...]
  */
 import { execSync } from "node:child_process";
 import { EventEmitter } from "node:events";
@@ -65,16 +67,28 @@ for (const b of ["claude", "gemini", "codex", "qwen"]) {
 }
 
 // Demo project: a tiny git repo so the status line shows repo, branch and +/- lines.
-writeFileSync(join(PROJECT, "src", "greet.js"), 'export function greet(name) {\n  return `Salom, ${name}!`;\n}\n');
+type Lang = "uz" | "ru" | "en";
+const LANGS: Lang[] = ["uz", "ru", "en"];
+const HELLO: Record<Lang, string> = { uz: "Salom", ru: "Привет", en: "Hello" };
+const git = (args: string) =>
+  execSync(`git -c user.name=atlas -c user.email=demo@example.invalid -c commit.gpgsign=false ${args}`, { cwd: PROJECT, stdio: "ignore" });
+/** Clean demo project in the given language (the agent demo edits greet.js). */
+function resetProject(lang: Lang) {
+  writeFileSync(join(PROJECT, "src", "greet.js"), "export function greet(name) {\n  return `" + HELLO[lang] + ", ${name}!`;\n}\n");
+  try {
+    git("add -A");
+    git("commit -q --allow-empty -m reset");
+  } catch {
+    // no git: the status line shows just the folder name
+  }
+}
 writeFileSync(join(PROJECT, "README.md"), "# my-app\n");
 try {
-  const g = (args: string) => execSync(`git -c user.name=atlas -c user.email=demo@example.invalid -c commit.gpgsign=false ${args}`, { cwd: PROJECT, stdio: "ignore" });
-  g("init -q -b main");
-  g("add -A");
-  g("commit -q -m init");
+  git("init -q -b main");
 } catch {
-  // no git: the status line shows just the folder name
+  // no git
 }
+resetProject("uz");
 process.chdir(PROJECT);
 
 // ------------------------------------------------------------ fake browser
@@ -254,7 +268,7 @@ function freshHome() {
 const cfgWith = (patch: Partial<typeof DEFAULT_CONFIG>) => ({ ...structuredClone(DEFAULT_CONFIG), ...patch });
 
 /** Renders <Chat>, runs the script, returns the recorded frames. */
-async function recordChat(cfg: typeof DEFAULT_CONFIG, script: (stdin: Stdin, rec: Recorder) => Promise<void>, prefix = ""): Promise<Frame[]> {
+async function recordChat(cfg: typeof DEFAULT_CONFIG, lang: Lang, script: (stdin: Stdin, rec: Recorder) => Promise<void>, prefix = ""): Promise<Frame[]> {
   const rec = new Recorder();
   rec.prefix = prefix;
   const stdout = new Stdout((s) => {
@@ -262,7 +276,7 @@ async function recordChat(cfg: typeof DEFAULT_CONFIG, script: (stdin: Stdin, rec
     rec.push(s);
   });
   const stdin = new Stdin();
-  const app = render(createElement(Chat, { cfg, version: "0.1.0", initialLang: "uz" }), {
+  const app = render(createElement(Chat, { cfg: { ...cfg, lang }, version: "0.1.0", initialLang: lang }), {
     stdout: stdout as unknown as NodeJS.WriteStream,
     stderr: new Stdout(() => {}) as unknown as NodeJS.WriteStream,
     stdin: stdin as unknown as NodeJS.ReadStream,
@@ -296,136 +310,187 @@ function logoFrames(start = 0): Frame[] {
 }
 const logoBlock = () => ["", ...logoRows(5, 24).map((r) => PAD + r), "", ""].join("\n");
 
-const demos: Record<string, () => Promise<Frame[]>> = {
-  async logo() {
-    return logoFrames(300);
+/** What the person types and what the mocked models answer, per site language. */
+const COPY: Record<
+  Lang,
+  { ask: string; answer: string; compare: string; groq: string; gemini: string; agent: string; friend: string; agentDone: string }
+> = {
+  uz: {
+    ask: "Python'da faylni qatorma-qator qanday o'qiyman?",
+    answer:
+      "`with open()` ishlating, fayl o'zi yopiladi:\n\n```python\nwith open(\"data.txt\", encoding=\"utf-8\") as f:\n    for line in f:\n        print(line.strip())\n```\n\n- `encoding=\"utf-8\"` o'zbek va kirill harflarini buzmaydi\n- fayl xotiraga to'liq yuklanmaydi, katta fayllar uchun ham mos",
+    compare: "/compare groq gemini CLI uchun Go yoki Rust?",
+    groq: "Go: bitta binary, tez kompilyatsiya, oddiy sintaksis. CLI'ni bir kunda yozib, hamma OS uchun yig'asiz.",
+    gemini: "Rust: eng tez ishga tushish va kichik xotira. clap + ratatui bilan chiroyli TUI. Lekin o'rganish uzoqroq.",
+    agent: "/agent greet() ism berilmasa ham ishlasin",
+    friend: "do'stim",
+    agentDone: "Tayyor. `greet()` endi ismsiz ham ishlaydi va `Salom, do'stim!` qaytaradi. Boshqa joyga tegmadim.",
+  },
+  ru: {
+    ask: "Как в Python прочитать файл построчно?",
+    answer:
+      "Используйте `with open()`, файл закроется сам:\n\n```python\nwith open(\"data.txt\", encoding=\"utf-8\") as f:\n    for line in f:\n        print(line.strip())\n```\n\n- `encoding=\"utf-8\"` не ломает кириллицу и узбекские буквы\n- файл не грузится в память целиком, подходит и для больших файлов",
+    compare: "/compare groq gemini Go или Rust для CLI?",
+    groq: "Go: один бинарник, быстрая компиляция, простой синтаксис. CLI пишется за день и собирается под все ОС.",
+    gemini: "Rust: самый быстрый старт и мало памяти. С clap + ratatui красивый TUI. Но учить дольше.",
+    agent: "/agent пусть greet() работает и без имени",
+    friend: "друг",
+    agentDone: "Готово. `greet()` теперь работает без имени и возвращает `Привет, друг!`. Остальное не трогал.",
+  },
+  en: {
+    ask: "How do I read a file line by line in Python?",
+    answer:
+      "Use `with open()`, the file closes itself:\n\n```python\nwith open(\"data.txt\", encoding=\"utf-8\") as f:\n    for line in f:\n        print(line.strip())\n```\n\n- `encoding=\"utf-8\"` keeps Cyrillic and accented letters intact\n- the file is not loaded into memory at once, so big files work too",
+    compare: "/compare groq gemini Go or Rust for a CLI?",
+    groq: "Go: one binary, fast builds, simple syntax. You write the CLI in a day and build it for every OS.",
+    gemini: "Rust: fastest startup and small memory use. clap + ratatui give a nice TUI. Takes longer to learn.",
+    agent: "/agent make greet() work without a name",
+    friend: "friend",
+    agentDone: "Done. `greet()` now works without a name and returns `Hello, friend!`. Nothing else changed.",
+  },
+};
+
+interface Demo {
+  /** Language-neutral demos are recorded once and saved as <name>.json. */
+  neutral?: boolean;
+  run: (lang: Lang) => Promise<Frame[]>;
+}
+
+const demos: Record<string, Demo> = {
+  logo: {
+    neutral: true,
+    async run() {
+      return logoFrames(300);
+    },
   },
 
-  async chat() {
-    freshHome();
-    handler = (url, body) => {
-      if (url === "https://openrouter.ai/api/v1/models") return json(OPENROUTER_MODELS);
-      if (url === "https://openrouter.ai/api/v1/chat/completions" && body) {
-        return streamText(
-          "`with open()` ishlating, fayl o'zi yopiladi:\n\n```python\nwith open(\"data.txt\", encoding=\"utf-8\") as f:\n    for line in f:\n        print(line.strip())\n```\n\n- `encoding=\"utf-8\"` o'zbek va kirill harflarini buzmaydi\n- fayl xotiraga to'liq yuklanmaydi, katta fayllar uchun ham mos",
-          { first: 900, every: 60 },
-        );
-      }
-      return undefined;
-    };
-    const cfg = cfgWith({ keys: { openrouter: "sk-or-demo", gemini: "demo", groq: "gsk_demo" } });
-    const intro = logoFrames(0);
-    const frames = await recordChat(
-      cfg,
-      async (stdin) => {
-        await sleep(600);
-        await type(stdin, "Python'da faylni qatorma-qator qanday o'qiyman?");
-        await sleep(450);
+  chat: {
+    async run(lang) {
+      freshHome();
+      const T = COPY[lang];
+      handler = (url, body) => {
+        if (url === "https://openrouter.ai/api/v1/models") return json(OPENROUTER_MODELS);
+        if (url === "https://openrouter.ai/api/v1/chat/completions" && body) return streamText(T.answer, { first: 900, every: 60 });
+        return undefined;
+      };
+      const cfg = cfgWith({ keys: { openrouter: "sk-or-demo", gemini: "demo", groq: "gsk_demo" } });
+      const intro = logoFrames(0);
+      const frames = await recordChat(
+        cfg,
+        lang,
+        async (stdin) => {
+          await sleep(600);
+          await type(stdin, T.ask);
+          await sleep(450);
+          stdin.write(ENTER);
+          await sleep(6500);
+        },
+        logoBlock(),
+      );
+      const offset = intro.at(-1)!.t + 350;
+      return [...intro, ...frames.map((f) => ({ ...f, t: f.t + offset }))];
+    },
+  },
+
+  connect: {
+    async run(lang) {
+      freshHome();
+      handler = (url) => {
+        if (url === "https://openrouter.ai/api/v1/auth/keys") return json({ key: "sk-or-v1-demo" });
+        if (url === "https://openrouter.ai/api/v1/models") return sleep(500).then(() => json(OPENROUTER_MODELS));
+        if (url.endsWith("/models")) return json({ data: [] });
+        return undefined;
+      };
+      const cfg = cfgWith({ keys: { groq: "gsk_demo" } });
+      return recordChat(cfg, lang, async (stdin) => {
+        await type(stdin, "/connect", 90);
+        await sleep(700);
         stdin.write(ENTER);
-        await sleep(6500);
-      },
-      logoBlock(),
-    );
-    const offset = intro.at(-1)!.t + 350;
-    return [...intro, ...frames.map((f) => ({ ...f, t: f.t + offset }))];
+        await sleep(1100);
+        await type(stdin, "open", 160);
+        await sleep(800);
+        stdin.write(ENTER);
+        await sleep(4200);
+      });
+    },
   },
 
-  async connect() {
-    freshHome();
-    handler = (url, body) => {
-      if (url === "https://openrouter.ai/api/v1/auth/keys") return json({ key: "sk-or-v1-demo" });
-      if (url === "https://openrouter.ai/api/v1/models") return sleep(500).then(() => json(OPENROUTER_MODELS));
-      if (url.endsWith("/models")) return json({ data: [] });
-      void body;
-      return undefined;
-    };
-    const cfg = cfgWith({ keys: { groq: "gsk_demo" } });
-    return recordChat(cfg, async (stdin) => {
-      await type(stdin, "/connect", 90);
-      await sleep(700);
-      stdin.write(ENTER);
-      await sleep(1100);
-      await type(stdin, "open", 160);
-      await sleep(800);
-      stdin.write(ENTER);
-      await sleep(4200);
-    });
+  compare: {
+    async run(lang) {
+      freshHome();
+      const T = COPY[lang];
+      handler = (url, body) => {
+        if (!body) return url.endsWith("/models") ? json({ data: [] }) : undefined;
+        if (url.includes("groq.com")) return streamText(T.groq, { first: 350, every: 45 }, LIMIT_HEADERS);
+        if (url.includes("generativelanguage")) return streamText(T.gemini, { first: 1100, every: 75 });
+        return undefined;
+      };
+      const cfg = cfgWith({ keys: { groq: "gsk_demo", gemini: "demo" } });
+      return recordChat(cfg, lang, async (stdin) => {
+        await type(stdin, T.compare, 50);
+        await sleep(400);
+        stdin.write(ENTER);
+        await sleep(4300);
+        stdin.write(ENTER);
+        await sleep(2200);
+      });
+    },
   },
 
-  async compare() {
-    freshHome();
-    handler = (url, body) => {
-      if (!body) return url.endsWith("/models") ? json({ data: [] }) : undefined;
-      if (url.includes("groq.com")) {
-        return streamText(
-          "Go: bitta binary, tez kompilyatsiya, oddiy sintaksis. CLI'ni bir kunda yozib, hamma OS uchun yig'asiz.",
-          { first: 350, every: 45 },
-          LIMIT_HEADERS,
-        );
+  agent: {
+    async run(lang) {
+      freshHome();
+      resetProject(lang);
+      const T = COPY[lang];
+      let step = 0;
+      handler = (url, body) => {
+        if (url === "https://openrouter.ai/api/v1/models") return json(OPENROUTER_MODELS);
+        if (!url.endsWith("/chat/completions") || !body) return undefined;
+        const n = step++;
+        const events =
+          n === 0
+            ? toolCallEvents("call_1", "read_file", { path: "src/greet.js" })
+            : n === 1
+              ? toolCallEvents("call_2", "edit_file", { path: "src/greet.js", old_string: "greet(name)", new_string: `greet(name = ${JSON.stringify(T.friend)})` })
+              : textEvents(T.agentDone);
+        return new Response(sse(events, { first: n === 2 ? 900 : 1100, every: 60 }), { status: 200, headers: { "content-type": "text/event-stream" } });
+      };
+      const cfg = cfgWith({ keys: { openrouter: "sk-or-demo" }, provider: "openrouter", models: { openrouter: "qwen/qwen3-coder:free" } });
+      try {
+        return await recordChat(cfg, lang, async (stdin) => {
+          await type(stdin, T.agent, 50);
+          await sleep(400);
+          stdin.write(ENTER);
+          await sleep(5200);
+          stdin.write(ENTER); // approve: first option ("yes")
+          await sleep(4000);
+        });
+      } finally {
+        resetProject(lang);
       }
-      if (url.includes("generativelanguage")) {
-        return streamText(
-          "Rust: eng tez ishga tushish va kichik xotira. clap + ratatui bilan chiroyli TUI. Lekin o'rganish uzoqroq.",
-          { first: 1100, every: 75 },
-        );
-      }
-      return undefined;
-    };
-    const cfg = cfgWith({ keys: { groq: "gsk_demo", gemini: "demo" } });
-    return recordChat(cfg, async (stdin) => {
-      await type(stdin, "/compare groq gemini CLI uchun Go yoki Rust?", 50);
-      await sleep(400);
-      stdin.write(ENTER);
-      await sleep(4300);
-      stdin.write(ENTER);
-      await sleep(2200);
-    });
+    },
   },
 
-  async agent() {
-    freshHome();
-    let step = 0;
-    handler = (url, body) => {
-      if (url === "https://openrouter.ai/api/v1/models") return json(OPENROUTER_MODELS);
-      if (!url.endsWith("/chat/completions") || !body) return undefined;
-      const n = step++;
-      const events =
-        n === 0
-          ? toolCallEvents("call_1", "read_file", { path: "src/greet.js" })
-          : n === 1
-            ? toolCallEvents("call_2", "edit_file", { path: "src/greet.js", old_string: "greet(name)", new_string: 'greet(name = "do\'stim")' })
-            : textEvents("Tayyor. `greet()` endi ismsiz ham ishlaydi va `Salom, do'stim!` qaytaradi. Boshqa joyga tegmadim.");
-      return new Response(sse(events, { first: n === 2 ? 900 : 1100, every: 60 }), { status: 200, headers: { "content-type": "text/event-stream" } });
-    };
-    const cfg = cfgWith({ keys: { openrouter: "sk-or-demo" }, provider: "openrouter", models: { openrouter: "qwen/qwen3-coder:free" } });
-    return recordChat(cfg, async (stdin) => {
-      await type(stdin, "/agent greet() ism berilmasa ham ishlasin", 50);
-      await sleep(400);
-      stdin.write(ENTER);
-      await sleep(5200);
-      stdin.write(ENTER); // approve: "Ha"
-      await sleep(4000);
-    });
-  },
-
-  async agents() {
-    freshHome();
-    handler = () => undefined;
-    const cfg = cfgWith({ keys: { groq: "gsk_demo" } });
-    return recordChat(cfg, async (stdin) => {
-      await type(stdin, "/agents", 90);
-      await sleep(600);
-      stdin.write(ENTER);
-      await sleep(1600);
-      stdin.write(DOWN);
-      await sleep(700);
-      stdin.write(DOWN);
-      await sleep(1000);
-      await type(stdin, "code", 180);
-      await sleep(1300);
-      stdin.write(DOWN);
-      await sleep(1600);
-    });
+  agents: {
+    async run(lang) {
+      freshHome();
+      handler = () => undefined;
+      const cfg = cfgWith({ keys: { groq: "gsk_demo" } });
+      return recordChat(cfg, lang, async (stdin) => {
+        await type(stdin, "/agents", 90);
+        await sleep(600);
+        stdin.write(ENTER);
+        await sleep(1600);
+        stdin.write(DOWN);
+        await sleep(700);
+        stdin.write(DOWN);
+        await sleep(1000);
+        await type(stdin, "code", 180);
+        await sleep(1300);
+        stdin.write(DOWN);
+        await sleep(1600);
+      });
+    },
   },
 };
 
@@ -439,18 +504,41 @@ function lines(ansi: string): string[] {
   return ls;
 }
 
-function finish(frames: Frame[]): { cols: number; rows: number; frames: Frame[] } {
+/** Saved shape: a deduplicated table of ANSI lines; each frame is [t, ...lineIndexes]. */
+interface Recording {
+  cols: number;
+  rows: number;
+  lines: string[];
+  frames: number[][];
+}
+
+function finish(frames: Frame[]): Recording {
   // Bursts (several renders within one paint) keep only their last frame.
   const kept = frames.filter((f, i) => !(frames[i + 1] && frames[i + 1]!.t - f.t < 24));
   const rows = Math.min(MAX_ROWS, Math.max(...kept.map((f) => lines(f.ansi).length)));
-  const out: Frame[] = [];
+  const table: string[] = [];
+  const seen = new Map<string, number>();
+  const out: number[][] = [];
+  let prev = "";
   const t0 = kept[0]?.t ?? 0;
   for (const f of kept) {
-    const ansi = lines(f.ansi).slice(-rows).join("\n");
-    if (out.at(-1)?.ansi === ansi) continue;
-    out.push({ t: f.t - t0, ansi });
+    const ls = lines(f.ansi).slice(-rows);
+    const key = ls.join("\n");
+    if (out.length && key === prev) continue;
+    prev = key;
+    out.push([
+      f.t - t0,
+      ...ls.map((l) => {
+        let i = seen.get(l);
+        if (i === undefined) {
+          i = table.push(l) - 1;
+          seen.set(l, i);
+        }
+        return i;
+      }),
+    ]);
   }
-  return { cols: COLS, rows, frames: out };
+  return { cols: COLS, rows, lines: table, frames: out };
 }
 
 // ------------------------------------------------------------- og.png
@@ -545,19 +633,27 @@ ${[0, 1, 2].map((i) => `<circle cx="${win.x + 18 + i * 16}" cy="${win.y + 18}" r
   console.log(`og.png  ${W}x${H}`);
 }
 
-const wanted = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(demos);
+// Args: "chat" (all languages) or "chat.ru" (one); none = everything.
+const jobs: { name: string; lang?: Lang }[] = [];
+for (const arg of process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(demos)) {
+  const [name, only] = arg.split(".") as [string, Lang | undefined];
+  const demo = demos[name];
+  if (!demo) throw new Error(`Unknown demo: ${name} (${Object.keys(demos).join(", ")})`);
+  if (only && !LANGS.includes(only)) throw new Error(`Unknown language: ${only} (${LANGS.join(", ")})`);
+  if (demo.neutral) jobs.push({ name });
+  else for (const lang of only ? [only] : LANGS) jobs.push({ name, lang });
+}
 mkdirSync(OUT_DIR, { recursive: true });
 try {
-  for (const name of wanted) {
-    const run = demos[name];
-    if (!run) throw new Error(`Unknown demo: ${name} (${Object.keys(demos).join(", ")})`);
-    const raw = await run();
+  for (const { name, lang } of jobs) {
+    const raw = await demos[name]!.run(lang ?? "uz");
     const data = finish(raw);
-    const file = join(OUT_DIR, `${name}.json`);
-    writeFileSync(file, `${JSON.stringify(data)}\n`);
-    const last = data.frames.at(-1)?.t ?? 0;
-    console.log(`${name.padEnd(8)} ${String(data.frames.length).padStart(4)} frames  ${(last / 1000).toFixed(1)}s  ${data.cols}x${data.rows}`);
-    if (name === "chat") await writeOg(lines(raw.at(-1)!.ansi).join("\n"));
+    const id = lang ? `${name}.${lang}` : name;
+    const text = `${JSON.stringify(data)}\n`;
+    writeFileSync(join(OUT_DIR, `${id}.json`), text);
+    const last = data.frames.at(-1)?.[0] ?? 0;
+    console.log(`${id.padEnd(11)} ${String(data.frames.length).padStart(4)} frames  ${(last / 1000).toFixed(1)}s  ${data.cols}x${data.rows}  ${(text.length / 1024).toFixed(0)} KB`);
+    if (name === "chat" && lang === "uz") await writeOg(lines(raw.at(-1)!.ansi).join("\n"));
   }
 } finally {
   process.chdir(ROOT);
