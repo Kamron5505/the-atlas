@@ -27,7 +27,7 @@ export const I = {
   reply: "●",
   on: "●",
   off: "○",
-  ok: "✓",
+  ok: "✔",
   fail: "✗",
   warn: "!",
   pointer: "›",

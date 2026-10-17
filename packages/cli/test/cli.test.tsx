@@ -85,8 +85,8 @@ describe("chat", () => {
     const cfg = { ...structuredClone(DEFAULT_CONFIG), keys: {}, order: ["groq"] };
     const ui = render(<Chat cfg={cfg} version="0.0.0" initialLang="en" />);
     await tick();
-    expect(ui.lastFrame()).toContain("Welcome to The Atlas");
-    expect(ui.lastFrame()).toContain("Connect an AI");
+    expect(ui.lastFrame()).toContain("none yet");
+    expect(ui.lastFrame()).toContain("Which AI do you want to connect?");
     expect(ui.lastFrame()).toContain("OpenRouter");
   });
 
@@ -113,7 +113,8 @@ describe("chat", () => {
     await tick(150);
     ui.stdin.write("\u001b[A");
     await tick();
-    expect(ui.lastFrame()).toMatch(/› first question\s*│/);
+    // once in the transcript, once recalled into the input line
+    expect(ui.lastFrame()!.split("› first question").length - 1).toBe(2);
     ui.stdin.write("\u001b");
     await tick(80);
     expect(ui.lastFrame()).toContain("Ask anything");
@@ -155,5 +156,25 @@ describe("chat", () => {
     await tick(150);
     expect(ui.lastFrame()).toContain("Gemini javobi");
     expect(urls.at(-1)).toContain("generativelanguage");
+  });
+});
+
+describe("logo intro", () => {
+  it("types ATLAS letter by letter on a terminal", async () => {
+    const { printLogo, logoRows } = await import("../src/ui/intro.js");
+    const out: string[] = [];
+    const stdout = process.stdout as unknown as { isTTY: boolean; columns: number; write: (s: string) => boolean };
+    const saved = { isTTY: stdout.isTTY, columns: stdout.columns, write: stdout.write };
+    Object.assign(stdout, { isTTY: true, columns: 100, write: (s: string) => (out.push(s), true) });
+    delete process.env.ATLAS_NO_ANIM;
+    try {
+      await printLogo();
+    } finally {
+      Object.assign(stdout, saved);
+    }
+    const all = out.join("");
+    expect(all.split("\u001b[6A").length - 1).toBe(4); // 5 frames, cursor goes back 4 times
+    expect(logoRows(5, false)[0]).toContain("█████╗ ████████╗");
+    expect(all).toContain("\u001b[?25h"); // cursor restored
   });
 });

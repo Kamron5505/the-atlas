@@ -3,8 +3,7 @@ import { Box, Static, Text, useApp, useInput, useWindowSize } from "ink";
 import TextInput from "ink-text-input";
 import { useEffect, useRef, useState } from "react";
 import { isLang, t, type Lang } from "../i18n.js";
-import { Welcome } from "./Banner.js";
-import { Connect } from "./Connect.js";
+import { Connect, shortName } from "./Connect.js";
 import { Markdown } from "./Markdown.js";
 import { ModelPicker, type ModelChoice } from "./ModelPicker.js";
 import { Select, type SelectItem } from "./Select.js";
@@ -12,7 +11,7 @@ import { C, I, SPARK, type Tag } from "./theme.js";
 
 interface Entry {
   id: number;
-  kind: "welcome" | "user" | "assistant" | "info" | "error";
+  kind: "header" | "step" | "ok" | "warn" | "user" | "assistant" | "info" | "error";
   text: string;
   meta?: string;
 }
@@ -38,8 +37,31 @@ function useTicker(active: boolean, ms = 120): number {
 }
 
 function modelLabel(cfg: AtlasConfig, provider: string, model?: string): string {
-  if (provider === "auto") return "auto";
+  if (provider === "auto") {
+    const ready = readyProviders(cfg);
+    const keyed = ready.filter((p) => p.def.keyRequired);
+    const chain = (keyed.length ? keyed : ready).map((p) => p.def.id).slice(0, 3);
+    return chain.length ? `auto ${I.swap} ${chain.join(` ${I.arrow} `)}` : "auto";
+  }
   return `${provider}/${model ?? cfg.models[provider] ?? getProvider(provider)?.defaultModel ?? "?"}`;
+}
+
+const connectedNames = (cfg: AtlasConfig) =>
+  readyProviders(cfg)
+    .filter((p) => p.def.keyRequired)
+    .map((p) => shortName(p.def));
+
+/** One "✔ label  value" row, label column aligned. */
+function Row({ mark, color, label, value, valueColor = C.neon, pad = 0 }: { mark: string; color: string; label: string; value: string; valueColor?: string; pad?: number }) {
+  return (
+    <Text>
+      <Text color={color}>{mark} </Text>
+      <Text color={C.text} bold>
+        {label.padEnd(pad)}
+      </Text>
+      <Text color={valueColor}> {value}</Text>
+    </Text>
+  );
 }
 
 export function Chat({
@@ -57,7 +79,7 @@ export function Chat({
   const { columns } = useWindowSize();
   const [lang, setLang] = useState<Lang>(initialLang);
   const L = t(lang);
-  const [log, setLog] = useState<Entry[]>(() => [entry("welcome", "")]);
+  const [log, setLog] = useState<Entry[]>(() => [entry("header", "")]);
   const [input, setInput] = useState("");
   const [inputKey, setInputKey] = useState(0);
   const [streaming, setStreaming] = useState<string | null>(null);
@@ -65,7 +87,7 @@ export function Chat({
   const [startedAt, setStartedAt] = useState(0);
   const [provider, setProvider] = useState(cfg.provider);
   const [model, setModel] = useState<string | undefined>(cfg.provider === "auto" ? undefined : cfg.models[cfg.provider]);
-  const [overlay, setOverlay] = useState<Overlay>(() => (readyProviders(cfg).filter((p) => p.def.keyRequired).length === 0 ? { kind: "connect" } : null));
+  const [overlay, setOverlay] = useState<Overlay>(() => (connectedNames(cfg).length === 0 ? { kind: "connect" } : null));
   const [slashIdx, setSlashIdx] = useState(0);
   const history = useRef<ChatMessage[]>(cfg.system ? [{ role: "system", content: cfg.system }] : []);
   const abort = useRef<AbortController | null>(null);
@@ -140,24 +162,24 @@ export function Chat({
         return setOverlay({ kind: "connect", initial: "omniroute" });
       case "clear":
         history.current = history.current.filter((m) => m.role === "system");
-        return push(entry("info", L.cleared));
+        return push(entry("ok", L.cleared));
       case "lang":
-        if (!isLang(arg)) return push(entry("error", "uz | ru | en"));
+        if (!isLang(arg)) return push(entry("error", "uz · ru · en"));
         cfg.lang = arg;
         saveConfig(cfg);
         setLang(arg);
-        return push(entry("info", t(arg).saved));
+        return push(entry("ok", t(arg).saved));
       case "provider":
         if (arg !== "auto" && !getProvider(arg)) return push(entry("error", L.providerUnknown));
         selectProvider(arg);
-        return push(entry("info", `${I.ok} ${modelLabel(cfg, arg)}`));
+        return push(entry("step", L.modelWord, modelLabel(cfg, arg)));
       case "model": {
         if (!arg) return setOverlay({ kind: "model" });
         const slash = arg.indexOf("/");
         const pid = slash > 0 ? arg.slice(0, slash) : "";
         if (!getProvider(pid)) return push(entry("error", L.providerUnknown));
         selectProvider(pid, arg.slice(slash + 1));
-        return push(entry("info", `${I.ok} ${arg}`));
+        return push(entry("step", L.modelWord, arg));
       }
       default:
         return push(entry("error", L.unknownCmd));
@@ -184,8 +206,7 @@ export function Chat({
           if (e.type === "provider") {
             meta = `${e.provider}/${e.model ?? "?"}`;
             setStatus(meta);
-          } else if (e.limited) push(entry("info", `${e.provider} · ${L.switched}`));
-          else push(entry("info", `${e.provider} · ${L.fallback}`));
+          } else push(entry("info", `${e.provider} · ${e.limited ? L.switched : L.fallback}`));
         },
       })) {
         out += chunk;
@@ -229,7 +250,7 @@ export function Chat({
     return [
       ...others.slice(0, 6).map((p) => ({
         key: p.def.id,
-        label: `${L.switchTo} ${p.def.name.replace(/ \(local\)$/, "")}`,
+        label: `${L.switchTo} ${shortName(p.def)}`,
         value: `p:${p.def.id}`,
         hint: p.model,
         tag: (p.def.keyRequired ? (p.def.free ? "free" : "paid") : "local") as Tag,
@@ -240,24 +261,47 @@ export function Chat({
     ];
   }
 
-  const ready = readyProviders(cfg);
   const elapsed = startedAt ? Math.floor((Date.now() - startedAt) / 1000) : 0;
   const spark = SPARK[tick % SPARK.length];
   const shimmer = [C.neon, C.glow, C.neon, C.blue][Math.floor(tick / 3) % 4];
+  const names = connectedNames(cfg);
+  const labelPad = Math.max(L.ais.length, L.modelWord.length);
 
   return (
     <Box flexDirection="column" width={width}>
       <Static items={log}>
         {(e) => (
-          <Box key={e.id} flexDirection="column" marginBottom={e.kind === "welcome" ? 0 : 1}>
-            {e.kind === "welcome" && (
-              <Welcome L={L} version={version} cwd={process.cwd()} connected={ready.filter((p) => p.def.keyRequired).map((p) => p.def.name)} width={width} />
+          <Box key={e.id} flexDirection="column" marginBottom={e.kind === "step" || e.kind === "ok" ? 0 : 1}>
+            {e.kind === "header" && (
+              <Box flexDirection="column">
+                <Text color={C.dim}>
+                  {"  "}
+                  {L.tagline} <Text color={C.faint}>· v{version}</Text>
+                </Text>
+                <Text> </Text>
+                {names.length ? (
+                  <Row mark={I.ok} color={C.ok} label={L.ais} value={names.join(" · ")} pad={labelPad} />
+                ) : (
+                  <Row mark={I.warn} color={C.warn} label={L.ais} value={L.noAis} valueColor={C.warn} pad={labelPad} />
+                )}
+                <Row mark={I.ok} color={C.ok} label={L.modelWord} value={modelLabel(cfg, cfg.provider)} pad={labelPad} />
+              </Box>
+            )}
+            {e.kind === "step" && <Row mark={I.ok} color={C.ok} label={e.text} value={e.meta ?? ""} />}
+            {e.kind === "ok" && (
+              <Text color={C.ok}>
+                {I.ok} <Text color={C.text}>{e.text}</Text>
+              </Text>
             )}
             {e.kind === "user" && (
-              <Box>
-                <Text color={C.dim}>{`${I.prompt} `}</Text>
-                <Text color={C.user}>{e.text}</Text>
-              </Box>
+              <Text>
+                <Text color={C.neon} bold>
+                  {I.prompt}{" "}
+                </Text>
+                <Text color={C.text} bold>
+                  {e.text}
+                </Text>
+              </Text>
             )}
             {e.kind === "assistant" && (
               <Box flexDirection="column">
@@ -283,8 +327,7 @@ export function Chat({
             )}
             {e.kind === "error" && (
               <Text color={C.err}>
-                {"  "}
-                {I.sub} {I.fail} {e.text}
+                {I.fail} {e.text}
               </Text>
             )}
           </Box>
@@ -304,9 +347,9 @@ export function Chat({
           <Text>
             <Text color={shimmer}>{spark} </Text>
             <Text color={shimmer}>{L.thinking}…</Text>
-            <Text color={C.dim}>
+            <Text color={C.faint}>
               {" "}
-              ({elapsed}s{status ? ` · ${status}` : ""} · {L.interrupt})
+              {elapsed}s{status ? ` · ${status}` : ""} · {L.interrupt}
             </Text>
           </Text>
         </Box>
@@ -317,10 +360,11 @@ export function Chat({
           cfg={cfg}
           L={L}
           initial={overlay.initial}
+          onStep={(q, a) => push(entry("step", q, a))}
           onDone={(msg, pid) => {
             setOverlay(null);
             if (msg) {
-              push(entry("info", `${I.ok} ${msg}`));
+              push(entry("ok", msg));
               if (pid && provider !== "auto") selectProvider(pid);
             }
           }}
@@ -334,7 +378,7 @@ export function Chat({
             setOverlay(null);
             if (c) {
               selectProvider(c.provider, c.model);
-              push(entry("info", `${I.ok} ${modelLabel(cfg, c.provider, c.model)}`));
+              push(entry("step", L.modelTitle, modelLabel(cfg, c.provider, c.model)));
             }
           }}
         />
@@ -343,7 +387,7 @@ export function Chat({
         <Select
           L={L}
           tone={C.warn}
-          title={`${I.warn} ${L.limitTitle} ${overlay.provider}`}
+          title={`${L.limitTitle} ${overlay.provider} · ${L.limitAsk}`}
           items={limitItems(overlay.provider)}
           filterable={false}
           onCancel={() => setOverlay(null)}
@@ -354,7 +398,7 @@ export function Chat({
             setOverlay(null);
             const pid = it.value === "auto" ? "auto" : it.value.slice(2);
             selectProvider(pid);
-            push(entry("info", `${I.ok} ${modelLabel(cfg, pid)}`));
+            push(entry("step", L.limitAsk, it.label));
             // Re-ask the same question on the new AI.
             void send(retry, false, { provider: pid });
           }}
@@ -362,9 +406,11 @@ export function Chat({
       )}
 
       {overlay === null && (
-        <>
-          <Box borderStyle="round" borderColor={streaming !== null ? C.faint : C.neon} paddingX={1}>
-            <Text color={streaming !== null ? C.faint : C.neon}>{`${I.prompt} `}</Text>
+        <Box flexDirection="column">
+          <Box borderStyle="single" borderLeft={false} borderRight={false} borderColor={streaming !== null ? C.faint : C.dim}>
+            <Text color={streaming !== null ? C.faint : C.neon} bold>
+              {`${I.prompt} `}
+            </Text>
             <TextInput
               key={inputKey}
               value={input}
@@ -378,7 +424,7 @@ export function Chat({
             />
           </Box>
           {slashMatches.length > 0 ? (
-            <Box flexDirection="column" paddingX={2}>
+            <Box flexDirection="column">
               {slashMatches.map((c, i) => (
                 <Text key={c}>
                   <Text color={i === slashIdx ? C.neon : C.faint}>{i === slashIdx ? `${I.pointer} ` : "  "}</Text>
@@ -390,15 +436,12 @@ export function Chat({
               ))}
             </Box>
           ) : (
-            <Box paddingX={2} justifyContent="space-between">
-              <Text color={C.faint}>{L.shortcuts}</Text>
-              <Text color={C.neon}>
-                {I.brand}{" "}
-                {provider === "auto" ? `auto ${I.swap} ${ready.map((p) => p.def.id).slice(0, 3).join(` ${I.arrow} `) || "—"}` : modelLabel(cfg, provider, model)}
-              </Text>
+            <Box justifyContent="space-between">
+              <Text color={C.faint}>{L.hint}</Text>
+              <Text color={C.dim}>{modelLabel(cfg, provider, model)}</Text>
             </Box>
           )}
-        </>
+        </Box>
       )}
     </Box>
   );

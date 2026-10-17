@@ -15,10 +15,10 @@ export interface SelectItem<T> {
   disabled?: boolean;
 }
 
-/** Arrow-key list with type-to-filter, groups, aligned columns and a scrolling window. */
-
 // Typed or pasted text without control characters.
 const isPrintable = (s: string) => [...s].every((ch) => ch >= " " && ch !== "\u007f");
+
+/** Question-style picker: "? question", aligned options, type-to-filter, scrolling window. */
 export function Select<T>({
   L,
   title,
@@ -75,18 +75,17 @@ export function Select<T>({
 
   let lastGroup: string | undefined;
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor={tone} paddingX={1}>
-      <Box justifyContent="space-between">
+    <Box flexDirection="column">
+      <Text>
         <Text color={tone} bold>
+          ?{" "}
+        </Text>
+        <Text color={C.text} bold>
           {title}
         </Text>
-        {filterable && (
-          <Text color={query ? C.text : C.faint}>
-            {I.pointer} {query || L.filter}
-          </Text>
-        )}
-      </Box>
-      <Box flexDirection="column" marginTop={1}>
+        {filterable && <Text color={query ? C.neon : C.faint}>  {query || `(${L.filter})`}</Text>}
+      </Text>
+      <Box flexDirection="column" paddingLeft={2}>
         {visible.map((it, i) => {
           const active = start + i === pos;
           const showGroup = it.group && it.group !== lastGroup;
@@ -95,12 +94,12 @@ export function Select<T>({
           return (
             <Box key={it.key} flexDirection="column">
               {showGroup && (
-                <Text color={C.dim} bold>
+                <Text color={C.faint} bold>
                   {it.group!.toUpperCase()}
                 </Text>
               )}
               <Text wrap="truncate">
-                <Text color={active ? C.neon : C.faint}>{active ? `${I.pointer} ` : "  "}</Text>
+                <Text color={active ? tone : C.faint}>{active ? `${I.pointer} ` : "  "}</Text>
                 {hasStatus && <Text color={it.on ? C.ok : C.faint}>{it.on ? I.on : I.off} </Text>}
                 <Text color={it.disabled ? C.faint : active ? C.text : C.user} bold={active}>
                   {label}
@@ -113,14 +112,10 @@ export function Select<T>({
           );
         })}
         {filtered.length === 0 && <Text color={C.dim}>  {L.nothing}</Text>}
-      </Box>
-      <Box marginTop={1} justifyContent="space-between">
-        <Text color={C.faint}>{L.keysNav}</Text>
-        {filtered.length > h && (
-          <Text color={C.faint}>
-            {pos + 1}/{filtered.length}
-          </Text>
-        )}
+        <Text color={C.faint}>
+          {L.keysNav}
+          {filtered.length > h ? `  ·  ${pos + 1}/${filtered.length}` : ""}
+        </Text>
       </Box>
     </Box>
   );

@@ -16,6 +16,7 @@ import { randomBytes } from "node:crypto";
 import { detectLang, isLang, t } from "./i18n.js";
 import { readHidden } from "./prompt.js";
 import { Chat } from "./ui/Chat.js";
+import { printLogo } from "./ui/intro.js";
 import { a } from "./ui/ansi.js";
 import { registerAgents, runAgentsMenu } from "./agents/command.js";
 import { installOmniroute, omnirouteInstalled, omnirouteUp, OMNIROUTE_URL, openUrl, startOmniroute } from "./system.js";
@@ -72,6 +73,7 @@ program
     if (opts.provider) cfg.provider = opts.provider;
     if (opts.model && cfg.provider !== "auto") cfg.models[cfg.provider] = opts.model;
     if (!process.stdin.isTTY) fail("chat needs a terminal; use: atlas ask \"…\"");
+    await printLogo();
     let next: ChatExit = { kind: "quit" };
     const app = render(<Chat cfg={cfg} version={VERSION} initialLang={detectLang(cfg)} onExit={(e) => (next = e)} />, { exitOnCtrlC: true });
     await app.waitUntilExit();
@@ -84,10 +86,19 @@ program
   .description("connect an AI: pick → browser opens → paste key → verified")
   .action(async (id: string | undefined) => {
     const cfg = loadConfig();
+    const L = t(detectLang(cfg));
     let msg: string | null = null;
-    const app = render(<Connect cfg={cfg} L={t(detectLang(cfg))} initial={id} onDone={(m) => ((msg = m), app.unmount())} />);
+    const app = render(
+      <Connect
+        cfg={cfg}
+        L={L}
+        initial={id}
+        onStep={(q, ans) => console.log(`${a.ok("✔")} ${a.bold(q)} ${a.neon(ans)}`)}
+        onDone={(m) => ((msg = m), app.unmount())}
+      />,
+    );
     await app.waitUntilExit();
-    if (msg) console.log(c.green(`✓ ${msg}`));
+    if (msg) console.log(`${a.ok("✔")} ${msg}`);
   });
 
 program

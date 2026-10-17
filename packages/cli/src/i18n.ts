@@ -3,6 +3,12 @@ import type { AtlasConfig } from "@the-atlas/core";
 export type Lang = "uz" | "ru" | "en";
 
 const en = {
+  keyAsk: "Paste your API key",
+  browserOpened: "browser opened",
+  keyOk: "Key verified",
+  limitAsk: "What next?",
+  modelWord: "Model",
+  hint: "/ commands · ↑↓ history · esc stop",
   tagline: "All AI assistants in one terminal",
   welcome: "Welcome to The Atlas",
   cwd: "folder",
@@ -44,7 +50,7 @@ const en = {
   nothing: "nothing found",
   keysNav: "↑↓ move · enter select · esc back",
   // connect
-  connectTitle: "Connect an AI",
+  connectTitle: "Which AI do you want to connect?",
   groupFree: "Free",
   groupLocal: "Local",
   groupPaid: "Paid",
@@ -64,7 +70,7 @@ const en = {
   omniInstallFail: "npm install -g omniroute failed — run it manually",
   omniOk: "OmniRoute connected · add your accounts in its dashboard",
   // models
-  modelTitle: "Choose a model",
+  modelTitle: "Which model should Atlas use?",
   loadingModels: "Loading models from your AIs",
   autoHint: "best free model, switches by itself",
   unreachable: "not reachable",
@@ -107,6 +113,12 @@ const en = {
 type Dict = typeof en;
 
 const uz: Dict = {
+  keyAsk: "API kalitni qo'ying",
+  browserOpened: "brauzer ochildi",
+  keyOk: "Kalit tekshirildi",
+  limitAsk: "Nima qilamiz?",
+  modelWord: "Model",
+  hint: "/ buyruqlar · ↑↓ tarix · esc to'xtatish",
   tagline: "Barcha AI yordamchilar bitta terminalda",
   welcome: "The Atlas'ga xush kelibsiz",
   cwd: "papka",
@@ -146,7 +158,7 @@ const uz: Dict = {
   filter: "qidirish uchun yozing",
   nothing: "hech narsa topilmadi",
   keysNav: "↑↓ tanlash · enter ochish · esc orqaga",
-  connectTitle: "AI ulash",
+  connectTitle: "Qaysi AI'ni ulaysiz?",
   groupFree: "Bepul",
   groupLocal: "Lokal",
   groupPaid: "Pullik",
@@ -165,7 +177,7 @@ const uz: Dict = {
   omniFail: "OmniRoute ishga tushmadi — boshqa terminalda `omniroute` yozing",
   omniInstallFail: "npm install -g omniroute xato berdi — qo'lda bajaring",
   omniOk: "OmniRoute ulandi · akkauntlarni uning panelida qo'shing",
-  modelTitle: "Model tanlash",
+  modelTitle: "Qaysi modeldan foydalanamiz?",
   loadingModels: "AI'lardan modellar yuklanmoqda",
   autoHint: "eng yaxshi bepul model, o'zi almashtiradi",
   unreachable: "ulanib bo'lmadi",
@@ -203,6 +215,12 @@ const uz: Dict = {
 };
 
 const ru: Dict = {
+  keyAsk: "Вставьте API-ключ",
+  browserOpened: "открыт браузер",
+  keyOk: "Ключ проверен",
+  limitAsk: "Что делаем?",
+  modelWord: "Модель",
+  hint: "/ команды · ↑↓ история · esc стоп",
   tagline: "Все ИИ-ассистенты в одном терминале",
   welcome: "Добро пожаловать в The Atlas",
   cwd: "папка",
@@ -242,7 +260,7 @@ const ru: Dict = {
   filter: "печатайте для поиска",
   nothing: "ничего не найдено",
   keysNav: "↑↓ выбор · enter открыть · esc назад",
-  connectTitle: "Подключить ИИ",
+  connectTitle: "Какой ИИ подключить?",
   groupFree: "Бесплатные",
   groupLocal: "Локальные",
   groupPaid: "Платные",
@@ -261,7 +279,7 @@ const ru: Dict = {
   omniFail: "OmniRoute не запустился — выполните `omniroute` в другом терминале",
   omniInstallFail: "npm install -g omniroute завершился с ошибкой — выполните вручную",
   omniOk: "OmniRoute подключён · добавьте аккаунты в его панели",
-  modelTitle: "Выбор модели",
+  modelTitle: "Какую модель использовать?",
   loadingModels: "Загружаю модели из ваших ИИ",
   autoHint: "лучшая бесплатная модель, переключается сама",
   unreachable: "недоступен",
@@ -302,12 +320,11 @@ export type { Dict };
 
 const DICTS: Record<Lang, Dict> = { en, uz, ru };
 
+/** Uzbek by default; ru/en only when chosen (`atlas lang ru`) or via ATLAS_LANG. */
 export function detectLang(cfg: AtlasConfig): Lang {
   if (cfg.lang) return cfg.lang;
-  const env = (process.env.ATLAS_LANG ?? process.env.LANG ?? Intl.DateTimeFormat().resolvedOptions().locale).toLowerCase();
-  if (env.startsWith("uz")) return "uz";
-  if (env.startsWith("ru")) return "ru";
-  return "en";
+  const env = (process.env.ATLAS_LANG ?? "").toLowerCase();
+  return isLang(env) ? env : "uz";
 }
 
 export function t(lang: Lang): Dict {

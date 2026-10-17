@@ -16,6 +16,7 @@ type Step =
   | { kind: "local"; def: ProviderDef };
 
 const isLocal = (def: ProviderDef) => !def.keyRequired;
+export const shortName = (def: ProviderDef) => def.name.replace(/ \(local\)$/, "");
 
 export function providerItems(cfg: AtlasConfig, L: Dict): SelectItem<ProviderDef>[] {
   const order = [L.groupFree, L.groupLocal, L.groupPaid];
@@ -25,7 +26,7 @@ export function providerItems(cfg: AtlasConfig, L: Dict): SelectItem<ProviderDef
     const group = isLocal(def) ? L.groupLocal : def.free ? L.groupFree : L.groupPaid;
     return {
       key: def.id,
-      label: def.name.replace(/ \(local\)$/, ""),
+      label: shortName(def),
       value: def,
       on: connected,
       tag: isLocal(def) ? ("local" as const) : def.free ? ("free" as const) : ("paid" as const),
@@ -35,16 +36,21 @@ export function providerItems(cfg: AtlasConfig, L: Dict): SelectItem<ProviderDef
   }).sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
 }
 
-/** Pick an AI → open its key page → paste key → verify → saved. */
+/**
+ * Pick an AI → its key page opens → paste key → verified.
+ * `onStep` receives answered questions ("✔ question answer") for the transcript.
+ */
 export function Connect({
   cfg,
   L,
   onDone,
+  onStep,
   initial,
 }: {
   cfg: AtlasConfig;
   L: Dict;
   onDone: (msg: string | null, providerId?: string) => void;
+  onStep?: (question: string, answer: string) => void;
   initial?: string;
 }) {
   const start = initial ? PROVIDERS.find((p) => p.id === initial) : undefined;
@@ -77,14 +83,14 @@ export function Connect({
         if (!(await startOmniroute())) return setStep({ kind: "error", def, text: L.omniFail });
       }
       openUrl(OMNIROUTE_URL);
-      return onDone(`${L.omniOk}: ${OMNIROUTE_URL}`, def.id);
+      return onDone(`${L.omniOk} · ${OMNIROUTE_URL}`, def.id);
     }
-    setStep({ kind: "busy", def, text: `${L.checking} ${def.name}` });
+    setStep({ kind: "busy", def, text: `${L.checking} ${shortName(def)}` });
     try {
       const models = await listModels(resolveProvider(cfg, def.id)!, AbortSignal.timeout(4000));
-      onDone(`${def.name} · ${models.length} ${L.modelsAvailable}`, def.id);
+      onDone(`${shortName(def)} · ${models.length} ${L.modelsAvailable}`, def.id);
     } catch {
-      setStep({ kind: "error", def, text: `${def.name} ${L.notRunning} ${def.signupUrl}` });
+      setStep({ kind: "error", def, text: `${shortName(def)} ${L.notRunning} ${def.signupUrl}` });
     }
   }
 
@@ -99,7 +105,7 @@ export function Connect({
       saveConfig(cfg);
       setKey("");
       const n = models.filter((m) => m.free).length || models.length;
-      onDone(`${def.name} ${L.connected} · ${n} ${L.modelsAvailable}`, def.id);
+      onDone(`${L.keyOk} · ${shortName(def)} · ${n} ${L.modelsAvailable}`, def.id);
     } catch (err) {
       setKey("");
       setStep({ kind: "error", def, text: (err as Error).message });
@@ -110,46 +116,60 @@ export function Connect({
     return (
       <Select
         L={L}
-        title={`${I.star} ${L.connectTitle}`}
+        title={L.connectTitle}
         items={providerItems(cfg, L)}
         height={16}
         onCancel={() => onDone(null)}
-        onSelect={(it) => setStep(it.value.keyRequired ? { kind: "key", def: it.value } : { kind: "local", def: it.value })}
+        onSelect={(it) => {
+          onStep?.(L.connectTitle, it.label);
+          setStep(it.value.keyRequired ? { kind: "key", def: it.value } : { kind: "local", def: it.value });
+        }}
       />
     );
   }
 
+  const site = step.def.signupUrl?.replace(/^https?:\/\//, "");
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor={step.kind === "error" ? C.err : C.neon} paddingX={1}>
-      <Text color={C.neon} bold>
-        {I.star} {step.def.name}
-      </Text>
-      <Box flexDirection="column" marginTop={1}>
-        {step.kind === "key" && (
-          <>
-            <Text color={C.user}>{L.step1}</Text>
-            {step.def.signupUrl && <Text color={C.blue}>   {step.def.signupUrl}</Text>}
-            <Text color={C.user}>{L.step2}</Text>
-            <Box marginTop={1} borderStyle="round" borderColor={C.faint} paddingX={1}>
-              <Text color={C.neon}>{I.prompt} </Text>
-              <TextInput value={key} onChange={setKey} onSubmit={(v) => verify(step.def, v)} mask="•" placeholder="API key" />
-            </Box>
-          </>
-        )}
-        {step.kind === "busy" && (
-          <Text color={C.glow}>
-            <Spinner type="dots" /> {step.text}
+    <Box flexDirection="column">
+      {step.kind === "key" && (
+        <>
+          <Text>
+            <Text color={C.neon} bold>
+              ?{" "}
+            </Text>
+            <Text color={C.text} bold>
+              {shortName(step.def)} · {L.keyAsk}
+            </Text>
+            {site && (
+              <Text color={C.faint}>
+                {"  "}({L.browserOpened}: <Text color={C.blue}>{site}</Text>)
+              </Text>
+            )}
           </Text>
-        )}
-        {step.kind === "error" && (
+          <Box paddingLeft={2}>
+            <Text color={C.neon}>{I.pointer} </Text>
+            <TextInput value={key} onChange={setKey} onSubmit={(v) => verify(step.def, v)} mask="•" placeholder="sk-…" />
+          </Box>
+          <Box paddingLeft={2}>
+            <Text color={C.faint}>{L.keyStored}</Text>
+          </Box>
+        </>
+      )}
+      {step.kind === "busy" && (
+        <Text color={C.glow}>
+          <Spinner type="dots" /> {step.text}
+        </Text>
+      )}
+      {step.kind === "error" && (
+        <>
           <Text color={C.err}>
             {I.fail} {step.text}
           </Text>
-        )}
-      </Box>
-      <Box marginTop={1}>
-        <Text color={C.faint}>{step.kind === "error" ? L.retry : L.keyStored}</Text>
-      </Box>
+          <Box paddingLeft={2}>
+            <Text color={C.faint}>{L.retry}</Text>
+          </Box>
+        </>
+      )}
     </Box>
   );
 }

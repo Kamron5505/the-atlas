@@ -31,7 +31,7 @@ Providers are tried in order (`openrouter → gemini → groq → …`). On a ra
 The Atlas uses **your own** keys. Free tiers are for personal use; do not share or resell keys.
 
 ---
-🇺🇿 **O'zbekcha:** barcha AI yordamchilar bitta terminalda. `atlas lang uz` — interfeys o'zbek tilida.
-🇷🇺 **Русский:** все ИИ-ассистенты в одном терминале. `atlas lang ru`.
+🇺🇿 **O'zbekcha (standart til):** barcha AI yordamchilar bitta terminalda.
+🇷🇺 **Русский:** все ИИ-ассистенты в одном терминале. `atlas lang ru` · English: `atlas lang en`.
 
 MIT · agent catalog derived from [Aidevix CLI](https://github.com/SunnatbekYusupovTech/sunnatbeeCLI).

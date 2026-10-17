@@ -4,7 +4,7 @@ import Spinner from "ink-spinner";
 import { useEffect, useState } from "react";
 import type { Dict } from "../i18n.js";
 import { Select, type SelectItem } from "./Select.js";
-import { C, I } from "./theme.js";
+import { C } from "./theme.js";
 
 export interface ModelChoice {
   provider: string;
@@ -64,12 +64,12 @@ export function ModelPicker({ cfg, L, onDone }: { cfg: AtlasConfig; L: Dict; onD
 
   if (!items) {
     return (
-      <Box borderStyle="round" borderColor={C.neon} paddingX={1}>
+      <Box>
         <Text color={C.glow}>
           <Spinner type="dots" /> {L.loadingModels}
         </Text>
       </Box>
     );
   }
-  return <Select L={L} title={`${I.star} ${L.modelTitle}`} items={items} height={14} onCancel={() => onDone(null)} onSelect={(it) => onDone(it.value)} />;
+  return <Select L={L} title={L.modelTitle} items={items} height={14} onCancel={() => onDone(null)} onSelect={(it) => onDone(it.value)} />;
 }
