@@ -111,10 +111,10 @@ describe("chat", () => {
     await tick();
     ui.stdin.write(ENTER);
     await tick(150);
-    ui.stdin.write("[A");
+    ui.stdin.write("\u001b[A");
     await tick();
     expect(ui.lastFrame()).toMatch(/› first question\s*│/);
-    ui.stdin.write("");
+    ui.stdin.write("\u001b");
     await tick(80);
     expect(ui.lastFrame()).toContain("Ask anything");
   });
