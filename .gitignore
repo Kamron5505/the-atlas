@@ -8,3 +8,6 @@ coverage/
 # site
 apps/site/dist/
 .astro/
+
+.vercel
+.env*
