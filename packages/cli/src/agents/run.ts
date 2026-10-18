@@ -1,7 +1,8 @@
-import { loadConfig, saveConfig } from "@the-atlas/core";
+import { healthProof, loadConfig, saveConfig } from "@the-atlas/core";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import crossSpawn from "cross-spawn";
 import { createInterface } from "node:readline/promises";
 import { findBinary, installFor, isRemoteScript, which, type Agent } from "./catalog.js";
 import { openInNewWindow } from "./terminal.js";
@@ -90,7 +91,8 @@ export function atlasWiring(agent: Agent, baseURL: string, token: string): { env
     case "aider":
       return { env, args: ["--model", "openai/auto", "--no-show-model-warnings"] };
     case "interpreter":
-      return { env, args: ["--api_base", baseURL, "--api_key", token, "--model", "openai/auto"] };
+      // Key via OPENAI_API_KEY only: command lines are visible to other users in the process list.
+      return { env, args: ["--api_base", baseURL, "--model", "openai/auto"] };
     case "sgpt":
       return { env: { ...env, API_BASE_URL: baseURL, DEFAULT_MODEL: "auto" }, args: [] };
     default:
@@ -101,13 +103,22 @@ export function atlasWiring(agent: Agent, baseURL: string, token: string): { env
 /** Agents known to work through the Atlas proxy with zero config. */
 export const ATLAS_READY = new Set(["aider", "interpreter", "sgpt"]);
 
-export const ATLAS_PORT = 4141;
+export const ATLAS_PORT = Number(process.env.ATLAS_PORT) || 4141;
 
-async function healthy(port: number): Promise<boolean> {
+/**
+ * "atlas" = our server (it proved it knows the token), "foreign" = some other
+ * program holds the port, "down" = nothing listens. The token is never sent.
+ */
+export async function probeServer(port: number, token: string): Promise<"atlas" | "foreign" | "down"> {
+  const nonce = randomBytes(16).toString("hex");
   try {
-    return (await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) })).ok;
+    const res = await fetch(`http://127.0.0.1:${port}/health?nonce=${nonce}`, { signal: AbortSignal.timeout(800) });
+    const body = (await res.json().catch(() => ({}))) as { proof?: unknown };
+    const want = Buffer.from(healthProof(token, nonce));
+    const got = Buffer.from(typeof body.proof === "string" ? body.proof : "");
+    return got.length === want.length && timingSafeEqual(got, want) ? "atlas" : "foreign";
   } catch {
-    return false;
+    return "down";
   }
 }
 
@@ -121,19 +132,23 @@ export async function ensureAtlasServer(port = ATLAS_PORT): Promise<{ url: strin
     cfg.serveToken = `atlas-${randomBytes(18).toString("base64url")}`;
     saveConfig(cfg);
   }
+  const token = cfg.serveToken;
   const url = `http://127.0.0.1:${port}/v1`;
-  if (!(await healthy(port))) {
+  const foreign = () => new Error(`Port ${port} is used by another program — Atlas will not send its token there. Close it or set ATLAS_PORT.`);
+  let state = await probeServer(port, token);
+  if (state === "foreign") throw foreign();
+  if (state === "down") {
     const entry = process.argv[1];
     if (!entry) throw new Error("cannot locate atlas entry point");
     spawn(process.execPath, [entry, "serve", "--port", String(port)], { detached: true, stdio: "ignore", windowsHide: true }).unref();
-    for (let i = 0; i < 25 && !(await healthy(port)); i++) await new Promise((r) => setTimeout(r, 200));
-    if (!(await healthy(port))) throw new Error(`Atlas server did not start on port ${port}`);
+    for (let i = 0; i < 25 && state === "down"; i++) {
+      await new Promise((r) => setTimeout(r, 200));
+      state = await probeServer(port, token);
+    }
+    if (state === "foreign") throw foreign();
+    if (state === "down") throw new Error(`Atlas server did not start on port ${port}`);
   }
-  return { url, token: cfg.serveToken };
-}
-
-function quoteWin(a: string): string {
-  return /[\s"&|<>^]/.test(a) ? `"${a.replace(/"/g, '""')}"` : a;
+  return { url, token };
 }
 
 export interface LaunchOptions {
@@ -192,7 +207,12 @@ export async function launchAgent(agent: Agent, extraArgs: string[], opts: Launc
 
   const bin = found.path;
   if (process.platform === "win32" && /\.(cmd|bat)$/i.test(bin)) {
-    return run([bin, ...args].map(quoteWin).join(" "), [], { shell: true, env });
+    // npm .cmd shims go through cmd.exe; cross-spawn escapes args for it (% ^ & | " — "BatBadBut").
+    return new Promise((resolve, reject) => {
+      const child = crossSpawn(bin, args, { stdio: "inherit", env });
+      child.on("error", reject);
+      child.on("exit", (code, signal) => resolve(code ?? (signal ? 1 : 0)));
+    });
   }
   return run(bin, args, { env });
 }

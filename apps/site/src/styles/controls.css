@@ -114,6 +114,15 @@
   font: 500 0.875rem var(--atlas-font-ui);
 }
 
+/* Header theme picker: icon only at every width (label in the tooltip), so a short
+   label like "Avto" never leaves a gap sized for "Qorong'i". */
+.atlas-select.is-compact:not(:has(.atlas-select__short)) .atlas-select__text {
+  display: none;
+}
+.atlas-select.is-compact:not(:has(.atlas-select__short)) {
+  padding-inline: 0.5rem 0.375rem;
+}
+
 /* Header between tablet and wide desktop: icon + code, full name in the tooltip. */
 @media (max-width: 79.99rem) {
   .atlas-select.is-compact .atlas-select__full {

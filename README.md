@@ -1,5 +1,7 @@
 # ◆ The Atlas
 
+[![npm](https://img.shields.io/npm/v/the-atlas?color=00E5FF&label=npm)](https://www.npmjs.com/package/the-atlas) [![CI](https://github.com/Kamron5505/the-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/Kamron5505/the-atlas/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-2F7BFF)](LICENSE)
+
 **All AI assistants in one terminal.** Free models with automatic switching, 47 AI coding agents, agent mode, MCP tools and voice input.
 
 ```bash
@@ -43,6 +45,8 @@ In chat type `/` for all commands, `@path` to attach a file, `↑↓` for histor
 ## Privacy
 
 Keys, chats and settings stay on your computer in `~/.the-atlas/`. Atlas has no server and sends nothing except your requests to the AI you chose.
+
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md)
 
 ## Development
 

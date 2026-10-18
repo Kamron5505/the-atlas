@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { forwardRaw, ProviderError } from "./client.js";
@@ -24,6 +24,11 @@ export function parseModel(cfg: AtlasConfig, model: unknown): { provider: string
     if (getProvider(id)) return { provider: id, model: model.slice(slash + 1) };
   }
   return { provider: "auto" };
+}
+
+/** HMAC-SHA256(token, nonce) as hex — answer to the /health identity challenge. */
+export function healthProof(token: string, nonce: string): string {
+  return createHmac("sha256", token).update(nonce).digest("hex");
 }
 
 function tokenOk(header: string | undefined, token: string): boolean {
@@ -118,7 +123,12 @@ export function startServer(config: AtlasConfig | (() => AtlasConfig), opts: Ser
   const server = createServer((req, res) => {
     const url = (req.url ?? "/").split("?")[0];
     const cfg = current();
-    if (url === "/health") return json(res, 200, { status: "ok" });
+    if (url === "/health") {
+      // Proof of identity for `atlas run --free`: HMAC(token, nonce). Lets the client tell
+      // a real Atlas server from another program on the port without revealing the token.
+      const nonce = new URL(req.url ?? "/", "http://x").searchParams.get("nonce");
+      return json(res, 200, nonce ? { status: "ok", proof: healthProof(opts.token, nonce) } : { status: "ok" });
+    }
     if (!tokenOk(req.headers.authorization, opts.token)) return json(res, 401, { error: { message: "invalid atlas token" } });
     if (req.method === "GET" && (url === "/v1/models" || url === "/models")) {
       try {

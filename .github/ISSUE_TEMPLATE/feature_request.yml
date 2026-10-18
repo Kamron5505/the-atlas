@@ -1,0 +1,17 @@
+name: Feature request
+description: An idea that would make Atlas better.
+labels: [feature]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How it could work — a command, a key, a screen.
+    validations:
+      required: true
